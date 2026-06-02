@@ -1,0 +1,98 @@
+1SI_SEGUNDO_PARCIAL_SI1/
+|-- app/
+|   |-- Http/
+|   |   `-- Controllers/
+|   |       |-- Controller.php
+|   |       `-- PostController.php
+|   |-- Models/
+|   |   |-- Post.php
+|   |   `-- User.php
+|   `-- Providers/
+|       `-- AppServiceProvider.php
+|
+|-- bootstrap/
+|   |-- app.php
+|   |-- providers.php
+|   `-- cache/
+|       |-- .gitignore
+|       |-- packages.php
+|       `-- services.php
+|
+|-- config/
+|   |-- app.php
+|   |-- auth.php
+|   |-- cache.php
+|   |-- database.php
+|   |-- filesystems.php
+|   |-- logging.php
+|   |-- mail.php
+|   |-- queue.php
+|   |-- services.php
+|   `-- session.php
+|
+|-- public/
+|   |-- .htaccess
+|   |-- index.php
+|   `-- robots.txt
+|
+|-- resources/
+|   |-- css/
+|   |   `-- app.css
+|   |-- js/
+|   |   `-- app.js
+|   `-- views/
+|       |-- home.blade.php
+|       `-- welcome.blade.php
+|
+|-- routes/
+|   |-- console.php
+|   `-- web.php
+|
+|-- storage/
+|   |-- app/
+|   |   |-- .gitignore
+|   |   |-- private/
+|   |   |   `-- .gitignore
+|   |   `-- public/
+|   |       `-- .gitignore
+|   |-- framework/
+|   |   |-- .gitignore
+|   |   |-- cache/
+|   |   |   |-- .gitignore
+|   |   |   `-- data/
+|   |   |       `-- .gitignore
+|   |   |-- sessions/
+|   |   |   `-- .gitignore
+|   |   |-- testing/
+|   |   |   `-- .gitignore
+|   |   `-- views/
+|   |       |-- .gitignore
+|   |       |-- 4db35d6dddcf521e9e8072f3bfc6c2d5.php
+|   |       `-- f787c688f8efe2440276338b22bf5310.php
+|   `-- logs/
+|       |-- .gitignore
+|       `-- laravel.log
+|
+|-- tests/
+|   |-- Feature/
+|   |   `-- ExampleTest.php
+|   |-- Unit/
+|   |   `-- ExampleTest.php
+|   `-- TestCase.php
+|
+|-- .editorconfig
+|-- .env
+|-- .env.example
+|-- .gitattributes
+|-- .gitignore
+|-- .npmrc
+|-- artisan
+|-- composer.json
+|-- composer.lock
+|-- package-lock.json
+|-- package.json
+|-- phpunit.xml
+|-- README.md
+`-- vite.config.js
+
+Nota: No se incluyeron carpetas de base de datos ni dependencias externas (database/, vendor/, node_modules/).
