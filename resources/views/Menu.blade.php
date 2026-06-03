@@ -109,7 +109,14 @@ main p { font-size:18px; color:#333; margin-bottom:24px; }
         Gestión Financiera
     </div>
 
-</div>
+    </div>
+
+    <div class="logout">
+        <form action="{{ route('logout') }}" method="POST">
+        @csrf
+        <button type="submit">Cerrar sesión</button>
+        </form>
+    </div>
 </aside>
 
 <main>
