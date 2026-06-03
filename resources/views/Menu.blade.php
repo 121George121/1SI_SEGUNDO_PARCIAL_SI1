@@ -77,45 +77,39 @@ main p { font-size:18px; color:#333; margin-bottom:24px; }
 
     <div class="menu-modulo">
 
-        <div onclick="window.location='{{ route('menu') }}'"
+    <div onclick="window.location='{{ route('menu') }}'"
          class="{{ request()->routeIs('menu') ? 'activo' : '' }}"
          style="cursor:pointer;">
         Dashboard
-        </div>
+    </div>
 
-        <div onclick="window.location='{{ route('gestion-academica.menu') }}'"
-         class="{{ request()->routeIs('gestion-academica.*') || request()->routeIs('carreras-cupos.*') ? 'activo' : '' }}"
+    <div onclick="window.location='{{ route('carreras-cupos.index') }}'"
+         class="{{ request()->routeIs('carreras-cupos.*') ? 'activo' : '' }}"
          style="cursor:pointer;">
-         Gestión Académica
-        </div>
-
-        <div onclick="window.location='{{ route('documentos.index') }}'"
-            class="{{ request()->routeIs('documentos.*') ? 'activo' : '' }}"
-            style="cursor:pointer;">
-            Inscripción y Documentación
-        </div>
-
-        <div onclick="window.location='{{ route('usuarios.index') }}'" 
-            class="{{ request()->routeIs('usuarios.*') ? 'activo' : '' }}" 
-            style="cursor:pointer;">
-            Usuario, Seguridad y Auditoría
-        </div>
-
-        <div>
-            Logística y Reportes
-        </div>
-
-        <div>
-            Gestión Financiera
-        </div>
+        Gestión Académica
     </div>
 
-    <div class="logout">
-        <form action="{{ route('logout') }}" method="POST">
-            @csrf
-            <button type="submit">Cerrar sesión</button>
-        </form>
+    <div onclick="window.location='{{ route('documentos.index') }}'"
+         class="{{ request()->routeIs('documentos.*') ? 'activo' : '' }}"
+         style="cursor:pointer;">
+        Inscripción y Documentación
     </div>
+
+    <div onclick="window.location='{{ route('usuarios.index') }}'"
+         class="{{ request()->routeIs('usuarios.*') ? 'activo' : '' }}"
+         style="cursor:pointer;">
+        Usuario, Seguridad y Auditoría
+    </div>
+
+    <div>
+        Logística y Reportes
+    </div>
+
+    <div>
+        Gestión Financiera
+    </div>
+
+</div>
 </aside>
 
 <main>

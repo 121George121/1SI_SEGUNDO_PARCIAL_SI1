@@ -13,10 +13,10 @@ class gestionarCarrerasYCuposController extends Controller
     public function index()
     {
         $carreras = DB::table('carrera as c')
-            ->leftJoin('cupocarrera as cc', DB::raw('"cc"."Id_carrera"'), '=', DB::raw('"c"."id_carrera"'))
+            ->leftJoin('cupocarrera as cc', DB::raw('"cc"."Id_carrera"'), '=', DB::raw('"c"."Id_carrera"'))
             ->leftJoin('gestion as g', DB::raw('"g"."Id_gestion"'), '=', DB::raw('"cc"."Id_gestion"'))
             ->select(
-                'c.id_carrera',
+                'c.Id_carrera as id_carrera',
                 'c.nombre_carrera',
                 'c.descripcion',
                 'c.estado',
@@ -27,7 +27,7 @@ class gestionarCarrerasYCuposController extends Controller
                 'g.periodo',
                 'g.estado as estado_gestion'
             )
-            ->orderBy('c.id_carrera', 'desc')
+            ->orderBy('c.Id_carrera', 'desc')
             ->get();
 
         $gestiones = DB::table('gestion')
@@ -66,7 +66,7 @@ class gestionarCarrerasYCuposController extends Controller
             DB::table('cupocarrera')->insert([
                 'cantidad_cupos' => $request->cantidad_cupos,
                 'Id_gestion' => $request->id_gestion,
-                'Id_carrera' => $carrera->id_carrera,
+                'Id_carrera' => $carrera->Id_carrera,
             ]);
 
             $this->registrarBitacora(
@@ -91,7 +91,7 @@ class gestionarCarrerasYCuposController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'nombre_carrera' => 'required|string|max:150|unique:carrera,nombre_carrera,' . $id . ',id_carrera',
+            'nombre_carrera' => 'required|string|max:150|unique:carrera,nombre_carrera,' . $id . ',Id_carrera',
             'descripcion' => 'nullable|string',
             'estado' => 'required|string|max:20',
         ]);

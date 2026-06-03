@@ -63,6 +63,7 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    Route::view('/gestion-academica', 'Gestion_Academica.Menu')->name('gestion-academica.menu');
+    Route::get('/gestion-academica', function () {
+        return redirect()->route('carreras-cupos.index');
+    })->name('gestion-academica.menu');
 });
-

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class gestionarCarrerasYCupos extends Model
 {
     protected $table = 'carrera';
-    protected $primaryKey = 'id_carrera';
+    protected $primaryKey = 'Id_carrera';
 
     public $timestamps = false;
 
