@@ -40,9 +40,9 @@
         <input type="text" name="nombre_usuario" value="{{ old('nombre_usuario', $usuario->nombre_usuario ?? '') }}" required style="width:100%;padding:8px;margin-top:4px;"></p>
     <p style="margin-bottom:8px;"><label>Correo</label><br>
         <input type="email" name="correo" value="{{ old('correo', $usuario->correo ?? '') }}" required style="width:100%;padding:8px;margin-top:4px;"></p>
-    <p style="margin-bottom:8px;"><label>Contrasena {{ $usuario ? '(dejar vacio para no cambiar)' : '' }}</label><br>
+    <p style="margin-bottom:8px;"><label>Contraseña {{ $usuario ? '(dejar vacio para no cambiar)' : '' }}</label><br>
         <input type="password" name="contrasena" {{ $usuario ? '' : 'required' }} style="width:100%;padding:8px;margin-top:4px;"></p>
-    <p style="margin-bottom:16px;"><label>Confirmar contrasena</label><br>
+    <p style="margin-bottom:16px;"><label>Confirmar contraseña</label><br>
         <input type="password" name="contrasena_confirmation" style="width:100%;padding:8px;margin-top:4px;"></p>
 
     @if($usuario)

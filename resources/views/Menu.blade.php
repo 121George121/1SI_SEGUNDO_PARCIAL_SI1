@@ -15,11 +15,31 @@ aside .sidebar-header { display:flex; align-items:center; padding:24px; border-b
 aside .sidebar-header img { width:80px; height:80px; object-fit:contain; }
 aside .sidebar-header span { font-size:32px; font-weight:800; background:linear-gradient(to right,rgb(141, 17, 17), #dc2626); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
 
-.menu-modulo { margin-top:16px; padding:0 12px; display:flex; flex-direction:column; gap:8px; }
-.menu-modulo div { background: rgba(255,255,255,0.15); padding:12px; border-radius:8px; text-align:center; cursor:pointer; transition: background 0.2s; font-weight:bold; }
-.menu-modulo div:hover { background: rgba(255,255,255,0.3); }
-.menu-modulo .activo { background:#dc2626; }
+.menu-modulo { 
+    margin-top:16px; 
+    padding:0 12px; 
+    display:flex; 
+    flex-direction:column; 
+    gap:8px; 
+}
 
+.menu-modulo div { 
+    background: rgba(255,255,255,0.15); 
+    padding:12px; 
+    border-radius:8px; 
+    text-align:center; 
+    cursor:pointer; 
+    transition: background 0.2s; 
+    font-weight:bold; 
+}
+
+.menu-modulo div:hover { 
+    background: rgba(255,255,255,0.3); 
+}
+
+.menu-modulo .activo { 
+    background:#dc2626; 
+}
 /* Cerrar sesión */
 .logout { margin-top:auto; padding:16px; }
 .logout button { width:100%; padding:12px; background:#dc2626; color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; transition: background 0.2s; }
@@ -56,12 +76,38 @@ main p { font-size:18px; color:#333; margin-bottom:24px; }
     </div>
 
     <div class="menu-modulo">
-        <div class="activo">Dashboard</div>
-        <div>Gestión Académica</div>
-        <div>Inscripción y Documentación</div>
-        <div onclick="window.location='{{ route('usuarios.index') }}'" style="cursor:pointer;">Usuario, Seguridad y Auditoría</div>
-        <div>Logística y Reportes</div>
-        <div>Gestión Financiera</div>
+
+        <div onclick="window.location='{{ route('menu') }}'"
+         class="{{ request()->routeIs('menu') ? 'activo' : '' }}"
+         style="cursor:pointer;">
+        Dashboard
+        </div>
+
+        <div onclick="window.location='{{ route('gestion-academica.menu') }}'"
+         class="{{ request()->routeIs('gestion-academica.*') || request()->routeIs('carreras-cupos.*') ? 'activo' : '' }}"
+         style="cursor:pointer;">
+         Gestión Académica
+        </div>
+
+        <div onclick="window.location='{{ route('documentos.index') }}'"
+            class="{{ request()->routeIs('documentos.*') ? 'activo' : '' }}"
+            style="cursor:pointer;">
+            Inscripción y Documentación
+        </div>
+
+        <div onclick="window.location='{{ route('usuarios.index') }}'" 
+            class="{{ request()->routeIs('usuarios.*') ? 'activo' : '' }}" 
+            style="cursor:pointer;">
+            Usuario, Seguridad y Auditoría
+        </div>
+
+        <div>
+            Logística y Reportes
+        </div>
+
+        <div>
+            Gestión Financiera
+        </div>
     </div>
 
     <div class="logout">
@@ -73,7 +119,7 @@ main p { font-size:18px; color:#333; margin-bottom:24px; }
 </aside>
 
 <main>
-    <h1>Bienvenido, {{ Auth::user()->nombre_usuario }}</h1>
+    <h1>Bienvenido  {{ Auth::user()->nombre_usuario }}</h1>
     <p>Sistema de Inscripción al CUP Preuniversitario</p>
 
     <!-- Cards de estadísticas -->

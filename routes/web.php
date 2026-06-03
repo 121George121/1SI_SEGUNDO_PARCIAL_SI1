@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Usuario_Seguridad_y_Auditoria\autenticacionController;
 use App\Http\Controllers\Usuario_Seguridad_y_Auditoria\gestionarUsuariosyRolesController;
+use App\Http\Controllers\Inscripcion_y_Documentacion\documentosController;
+use App\Http\Controllers\Gestion_Academica\gestionarCarrerasYCuposController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -35,3 +37,32 @@ Route::prefix('usuarios')->middleware('auth')->group(function () {
     Route::get('/{id}/roles', [gestionarUsuariosyRolesController::class, 'mostrarAsignarRoles'])->name('usuarios.roles');
     Route::post('/{id}/roles', [gestionarUsuariosyRolesController::class, 'assignRoles'])->name('usuarios.roles.update');
 });
+
+Route::prefix('documentos')->middleware('auth')->group(function () {
+    Route::get('/', [documentosController::class, 'index'])->name('documentos.index');
+    Route::post('/', [documentosController::class, 'store'])->name('documentos.store');
+    Route::put('/{id}', [documentosController::class, 'update'])->name('documentos.update');
+    Route::put('/{persona}/{documento}/validar', [documentosController::class, 'validarDocumento'])->name('documentos.validar');
+    Route::put('/{persona}/{documento}/observar', [documentosController::class, 'observarDocumento'])->name('documentos.observar');
+    Route::delete('/{id}', [documentosController::class, 'destroyRequisito'])->name('documentos.destroy');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('/carreras-cupos', [gestionarCarrerasYCuposController::class, 'index'])
+        ->name('carreras-cupos.index');
+    Route::post('/carreras-cupos', [gestionarCarrerasYCuposController::class, 'store'])
+        ->name('carreras-cupos.store');
+    Route::put('/carreras-cupos/{id}', [gestionarCarrerasYCuposController::class, 'update'])
+        ->name('carreras-cupos.update');
+    Route::put('/carreras-cupos/{id}/cupos', [gestionarCarrerasYCuposController::class, 'actualizarCupos'])
+        ->name('carreras-cupos.cupos');
+    Route::put('/carreras-cupos/{id}/deshabilitar', [gestionarCarrerasYCuposController::class, 'deshabilitar'])
+        ->name('carreras-cupos.deshabilitar');
+    Route::put('/carreras-cupos/{id}/habilitar', [gestionarCarrerasYCuposController::class, 'habilitar'])
+        ->name('carreras-cupos.habilitar');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::view('/gestion-academica', 'Gestion_Academica.Menu')->name('gestion-academica.menu');
+});
+
