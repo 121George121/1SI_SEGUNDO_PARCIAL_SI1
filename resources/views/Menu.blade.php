@@ -101,7 +101,9 @@ main p { font-size:18px; color:#333; margin-bottom:24px; }
         Usuario, Seguridad y Auditoría
     </div>
 
-    <div>
+    <div onclick="window.location='{{ route('aulas.index') }}'"
+        class="{{ request()->routeIs('aulas.*') ? 'activo' : '' }}"
+        style="cursor:pointer;">
         Logística y Reportes
     </div>
 

@@ -5,6 +5,7 @@ use App\Http\Controllers\Usuario_Seguridad_y_Auditoria\autenticacionController;
 use App\Http\Controllers\Usuario_Seguridad_y_Auditoria\gestionarUsuariosyRolesController;
 use App\Http\Controllers\Inscripcion_y_Documentacion\documentosController;
 use App\Http\Controllers\Gestion_Academica\gestionarCarrerasYCuposController;
+use App\Http\Controllers\Logistica_Recursos_y_Reportes\gestionarAulasController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -66,4 +67,22 @@ Route::middleware('auth')->group(function () {
     Route::get('/gestion-academica', function () {
         return redirect()->route('carreras-cupos.index');
     })->name('gestion-academica.menu');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('/logistica-recursos', function () {
+        return redirect()->route('aulas.index');
+    })->name('logistica-recursos.menu');
+    Route::get('/aulas', [gestionarAulasController::class, 'index'])
+        ->name('aulas.index');
+    Route::post('/aulas', [gestionarAulasController::class, 'store'])
+        ->name('aulas.store');
+    Route::put('/aulas/{id}', [gestionarAulasController::class, 'update'])
+        ->name('aulas.update');
+    Route::put('/aulas/{id}/capacidad', [gestionarAulasController::class, 'actualizarCapacidad'])
+        ->name('aulas.capacidad');
+    Route::put('/aulas/{id}/deshabilitar', [gestionarAulasController::class, 'deshabilitar'])
+        ->name('aulas.deshabilitar');
+    Route::put('/aulas/{id}/habilitar', [gestionarAulasController::class, 'habilitar'])
+        ->name('aulas.habilitar');
 });
