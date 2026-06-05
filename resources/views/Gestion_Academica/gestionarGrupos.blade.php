@@ -307,9 +307,21 @@
 
 <div class="card-box">
     <h2 style="color:#0b2d6b; margin-bottom:16px;">Grupos Registrados</h2>
+        <div style="margin-bottom:16px;">
+    <label style="font-weight:bold; color:#0b2d6b; display:block; margin-bottom:6px;">
+        Buscar Grupo
+    </label>
+
+    <input 
+        type="text" 
+        id="buscarGrupo" 
+        placeholder="Buscar por grupo, aula, docente, turno, modalidad o gestión..."
+        style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; font-size:14px;"
+    >
+    </div>
 
     <div class="table-responsive">
-        <table>
+        <table id="tablaGrupos">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -431,6 +443,16 @@
                                         <button type="submit" class="btn-success">Habilitar</button>
                                     </form>
                                 @endif
+                                <form action="{{ route('grupos.destroy', $grupo->id_grupo) }}" 
+                                    method="POST"
+                                    onsubmit="return confirm('¿Seguro que deseas eliminar este grupo definitivamente?')">
+                                    @csrf
+                                    @method('DELETE')
+
+                                    <button type="submit" class="btn-danger">
+                                        Eliminar
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>
@@ -483,6 +505,30 @@ document.querySelectorAll('[data-search-select]').forEach(function (contenedor) 
         if (!contenedor.contains(e.target)) {
             opciones.classList.remove('activo');
         }
+    });
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const buscador = document.getElementById('buscarGrupo');
+    const tabla = document.getElementById('tablaGrupos');
+
+    if (!buscador || !tabla) return;
+
+    buscador.addEventListener('keyup', function () {
+        const texto = buscador.value.toLowerCase();
+        const filas = tabla.querySelectorAll('tbody tr');
+
+        filas.forEach(function (fila) {
+            const contenidoFila = fila.textContent.toLowerCase();
+
+            if (contenidoFila.includes(texto)) {
+                fila.style.display = '';
+            } else {
+                fila.style.display = 'none';
+            }
+        });
     });
 });
 </script>

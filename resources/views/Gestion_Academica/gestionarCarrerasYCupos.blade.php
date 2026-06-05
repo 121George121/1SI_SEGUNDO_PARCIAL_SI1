@@ -192,8 +192,21 @@
 <div class="card-box">
     <h2 style="color:#0b2d6b; margin-bottom:16px;">Carreras y Cupos Registrados</h2>
 
+    <div style="margin-bottom:16px;">
+        <label style="font-weight:bold; color:#0b2d6b; display:block; margin-bottom:6px;">
+            Buscar Carrera
+        </label>
+
+        <input 
+            type="text" 
+            id="buscarCarreraCupo" 
+            placeholder="Buscar por carrera, descripción, estado, gestión o cupos..."
+            style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; font-size:14px;"
+        >
+    </div>
+
     <div style="overflow-x: auto;">
-        <table>
+        <table id="tablaCarrerasCupos">
             <thead>
                 <tr>
                     <th>ID</th>
@@ -262,6 +275,17 @@
                                         <button type="submit" class="btn btn-success">Habilitar</button>
                                     </form>
                                 @endif
+
+                                <form action="{{ route('carreras-cupos.destroy', $item->id_carrera) }}" 
+                                    method="POST"
+                                    onsubmit="return confirm('¿Seguro que deseas eliminar esta carrera definitivamente? También se eliminarán sus cupos asociados.')">
+                                    @csrf
+                                    @method('DELETE')
+
+                                        <button type="submit" class="btn btn-danger">
+                                            Eliminar
+                                        </button>
+                                </form>
                             </div>
                         </td>
                     </tr>
@@ -457,6 +481,29 @@ document.querySelectorAll('[data-search-select]').forEach(function (contenedor) 
         if (!contenedor.contains(e.target)) {
             opciones.classList.remove('activo');
         }
+    });
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const buscador = document.getElementById('buscarCarreraCupo');
+    const tabla = document.getElementById('tablaCarrerasCupos');
+
+    if (!buscador || !tabla) return;
+
+    buscador.addEventListener('keyup', function () {
+        const texto = buscador.value.toLowerCase();
+        const filas = tabla.querySelectorAll('tbody tr');
+
+        filas.forEach(function (fila) {
+            const contenidoFila = fila.textContent.toLowerCase();
+
+            if (contenidoFila.includes(texto)) {
+                fila.style.display = '';
+            } else {
+                fila.style.display = 'none';
+            }
+        });
     });
 });
 </script>

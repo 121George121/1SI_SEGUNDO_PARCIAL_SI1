@@ -279,6 +279,43 @@ class gestionarGruposController extends Controller
         return redirect()->route('grupos.index')
             ->with('success', 'Grupo habilitado correctamente.');
     }
+        public function destroy($id)
+        {
+            DB::beginTransaction();
+
+            try {
+                $grupo = DB::table('grupo')
+                    ->where('Id_grupo', $id)
+                    ->first();
+
+                if (!$grupo) {
+                    return redirect()->route('grupos.index')
+                        ->withErrors(['error' => 'El grupo no existe.']);
+                }
+
+                DB::table('grupo')
+                    ->where('Id_grupo', $id)
+                    ->delete();
+
+                $this->registrarBitacora(
+                    'Gestion Academica',
+                    'Eliminó el grupo ' . $grupo->sigla_grupo . '.'
+                );
+
+                DB::commit();
+
+                return redirect()->route('grupos.index')
+                    ->with('success', 'Grupo eliminado correctamente.');
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+
+                return redirect()->route('grupos.index')
+                    ->withErrors([
+                        'error' => 'No se pudo eliminar el grupo: ' . $e->getMessage()
+                    ]);
+            }
+        }
 
     private function registrarBitacora($tipo, $descripcion)
     {
@@ -290,7 +327,7 @@ class gestionarGruposController extends Controller
                 'hora' => now()->format('H:i:s'),
                 'estado' => 'activo',
                 'Id_usuario' => Auth::id(),
-            ]);
+           ]);
         }
     }
 }

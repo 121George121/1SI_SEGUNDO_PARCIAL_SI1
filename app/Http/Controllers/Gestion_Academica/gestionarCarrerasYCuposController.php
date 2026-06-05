@@ -175,6 +175,44 @@ class gestionarCarrerasYCuposController extends Controller
             ->with('success', 'Carrera habilitada correctamente.');
     }
 
+    public function destroy($id)
+    {
+        DB::beginTransaction();
+
+        try {
+            $carrera = DB::table('carrera')
+                ->where('id_carrera', $id)
+                ->first();
+
+            if (!$carrera) {
+                return redirect()->route('carreras-cupos.index')
+                    ->withErrors(['error' => 'La carrera no existe.']);
+            }
+
+            DB::table('carrera')
+                ->where('id_carrera', $id)
+                ->delete();
+
+            $this->registrarBitacora(
+                'Gestion Academica',
+                'Eliminó la carrera ' . $carrera->nombre_carrera . ' y sus cupos asociados.'
+            );
+
+            DB::commit();
+
+            return redirect()->route('carreras-cupos.index')
+                ->with('success', 'Carrera eliminada correctamente.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return redirect()->route('carreras-cupos.index')
+                ->withErrors([
+                    'error' => 'No se pudo eliminar la carrera: ' . $e->getMessage()
+                ]);
+        }
+    }
+    
     private function registrarBitacora($tipo, $descripcion)
     {
         if (Auth::check()) {

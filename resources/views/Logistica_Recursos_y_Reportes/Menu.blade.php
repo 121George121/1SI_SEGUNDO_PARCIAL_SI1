@@ -217,6 +217,11 @@
                 class="{{ request()->routeIs('aulas.*') ? 'activo' : '' }}" style="cursor:pointer;">
                 CU08 - Gestionar Aulas
             </div>
+            <div onclick="window.location='{{ route('docentes.index') }}'"
+                class="{{ request()->routeIs('docentes.*') ? 'activo' : '' }}"
+                style="cursor:pointer;">
+                CU09 - Gestionar Docentes
+            </div>
 
         </div>
 

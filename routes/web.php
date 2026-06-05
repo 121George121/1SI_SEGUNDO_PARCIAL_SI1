@@ -7,9 +7,11 @@ use App\Http\Controllers\Inscripcion_y_Documentacion\documentosController;
 use App\Http\Controllers\Gestion_Academica\gestionarCarrerasYCuposController;
 use App\Http\Controllers\Logistica_Recursos_y_Reportes\gestionarAulasController;
 use App\Http\Controllers\Gestion_Academica\gestionarGruposController;
+use App\Http\Controllers\Logistica_Recursos_y_Reportes\gestionarDocentesController;
+
 Route::get('/', function () {
     return redirect()->route('login');
-});
+}); 
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [autenticacionController::class, 'mostrarLogin'])->name('login');
@@ -61,6 +63,8 @@ Route::middleware('auth')->group(function () {
         ->name('carreras-cupos.deshabilitar');
     Route::put('/carreras-cupos/{id}/habilitar', [gestionarCarrerasYCuposController::class, 'habilitar'])
         ->name('carreras-cupos.habilitar');
+    Route::delete('/carreras-cupos/{id}', [gestionarCarrerasYCuposController::class, 'destroy'])
+    ->name('carreras-cupos.destroy');
 });
 
 Route::middleware('auth')->group(function () {
@@ -98,4 +102,23 @@ Route::middleware('auth')->group(function () {
         ->name('grupos.deshabilitar');
     Route::put('/grupos/{id}/habilitar', [gestionarGruposController::class, 'habilitar'])
         ->name('grupos.habilitar');
+    Route::delete('/grupos/{id}', [gestionarGruposController::class, 'destroy'])
+    ->name('grupos.destroy');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('/docentes', [gestionarDocentesController::class, 'index'])
+        ->name('docentes.index');
+    Route::post('/docentes', [gestionarDocentesController::class, 'store'])
+        ->name('docentes.store');
+    Route::put('/docentes/{id}', [gestionarDocentesController::class, 'update'])
+        ->name('docentes.update');
+    Route::put('/docentes/{id}/documentos', [gestionarDocentesController::class, 'validarDocumentos'])
+        ->name('docentes.documentos');
+    Route::put('/docentes/{id}/deshabilitar', [gestionarDocentesController::class, 'deshabilitar'])
+        ->name('docentes.deshabilitar');
+    Route::put('/docentes/{id}/habilitar', [gestionarDocentesController::class, 'habilitar'])
+        ->name('docentes.habilitar');
+    Route::delete('/docentes/{id}', [gestionarDocentesController::class, 'destroy'])
+    ->name('docentes.destroy');
 });
