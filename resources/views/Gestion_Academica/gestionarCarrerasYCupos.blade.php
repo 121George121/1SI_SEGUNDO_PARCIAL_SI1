@@ -82,6 +82,47 @@
             grid-column: 1;
         }
     }
+    .search-select {
+    position: relative;
+}
+
+.search-input {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 14px;
+    width: 100%;
+}
+
+.search-options {
+    display: none;
+    position: absolute;
+    top: 100%;
+    margin-top: 6px;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    max-height: 180px;
+    overflow-y: auto;
+    z-index: 999;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.search-options.activo {
+    display: block;
+}
+
+.search-option {
+    padding: 10px;
+    cursor: pointer;
+    color: #333;
+}
+
+.search-option:hover {
+    background: #e5e7eb;
+}
 </style>
 
 @if(session('success'))
@@ -117,16 +158,19 @@
             </select>
         </div>
 
-        <div class="form-group">
+        <div class="form-group search-select" data-search-select>
             <label>Gestión</label>
-            <select name="id_gestion" required>
-                <option value="">Seleccione una gestión</option>
+
+            <input type="text" class="search-input" placeholder="Buscar gestión..." autocomplete="off" required>
+            <input type="hidden" name="id_gestion">
+
+            <div class="search-options">
                 @foreach($gestiones as $gestion)
-                    <option value="{{ $gestion->id_gestion }}">
+                    <div class="search-option" data-value="{{ $gestion->id_gestion }}">
                         {{ $gestion->anio }} - {{ $gestion->periodo }}
-                    </option>
+                    </div>
                 @endforeach
-            </select>
+            </div>
         </div>
 
         <div class="form-group">
@@ -196,12 +240,13 @@
                                 </button>
 
                                 <button type="button"
-                                    class="btn btn-success btn-abrir-actualizar-cupos"
-                                    data-id="{{ $item->id_carrera }}"
-                                    data-nombre="{{ $item->nombre_carrera }}"
-                                    data-id-gestion="{{ $item->id_gestion ?? '' }}"
-                                    data-cupos="{{ $item->cantidad_cupos ?? 0 }}">
-                                    Actualizar Cupos
+                                class="btn btn-success btn-abrir-actualizar-cupos"
+                                data-id="{{ $item->id_carrera }}"
+                                data-nombre="{{ $item->nombre_carrera }}"
+                                data-id-gestion="{{ $item->id_gestion ?? '' }}"
+                                data-gestion-text="{{ $item->id_gestion ? $item->anio . ' - ' . $item->periodo : '' }}"
+                                data-cupos="{{ $item->cantidad_cupos ?? 0 }}">
+                                Actualizar Cupos
                                 </button>
 
                                 @if($item->estado === 'activo')
@@ -282,16 +327,31 @@
             @csrf
             @method('PUT')
 
-            <div class="form-group full">
+            <div class="form-group full search-select" data-search-select>
                 <label>Gestión Académica</label>
-                <select name="id_gestion" id="edit_cupos_id_gestion" required>
-                    <option value="">Seleccione una gestión</option>
+
+                <input 
+                    type="text" 
+                    id="edit_cupos_gestion_text"
+                    class="search-input" 
+                    placeholder="Buscar gestión..." 
+                    autocomplete="off"
+                    required
+                >
+
+                <input 
+                    type="hidden" 
+                    id="edit_cupos_id_gestion"
+                    name="id_gestion"
+                >
+
+                <div class="search-options">
                     @foreach($gestiones as $gestion)
-                        <option value="{{ $gestion->id_gestion }}">
+                        <div class="search-option" data-value="{{ $gestion->id_gestion }}">
                             {{ $gestion->anio }} - {{ $gestion->periodo }}
-                        </option>
+                        </div>
                     @endforeach
-                </select>
+                </div>
             </div>
 
             <div class="form-group full">
@@ -335,6 +395,8 @@
                 formCupos.action = `{{ url('/carreras-cupos') }}/${this.dataset.id}/cupos`;
 
                 spanNombre.textContent = this.dataset.nombre || '';
+
+                document.getElementById('edit_cupos_gestion_text').value = this.dataset.gestionText || '';
                 document.getElementById('edit_cupos_id_gestion').value = this.dataset.idGestion || '';
                 document.getElementById('edit_cupos_cantidad').value = this.dataset.cupos || '0';
 
@@ -351,5 +413,51 @@
         document.getElementById('modalActualizarCupos').classList.remove('activo');
     }
 </script>
+<script>
+document.querySelectorAll('[data-search-select]').forEach(function (contenedor) {
+    const input = contenedor.querySelector('.search-input');
+    const hidden = contenedor.querySelector('input[type="hidden"]');
+    const opciones = contenedor.querySelector('.search-options');
+    const items = contenedor.querySelectorAll('.search-option');
 
+    input.addEventListener('focus', function () {
+        opciones.classList.add('activo');
+    });
+
+    input.addEventListener('input', function () {
+        const texto = input.value.toLowerCase();
+
+        hidden.value = '';
+
+        items.forEach(function (item) {
+            const coincide = item.textContent.toLowerCase().includes(texto);
+            item.style.display = coincide ? 'block' : 'none';
+        });
+
+        opciones.classList.add('activo');
+    });
+
+    items.forEach(function (item) {
+        item.addEventListener('click', function () {
+            input.value = item.textContent.trim();
+            hidden.value = item.dataset.value;
+            opciones.classList.remove('activo');
+        });
+    });
+
+    contenedor.closest('form')?.addEventListener('submit', function (e) {
+        if (!hidden.value) {
+            e.preventDefault();
+            alert('Debe seleccionar una gestión de la lista.');
+            input.focus();
+        }
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!contenedor.contains(e.target)) {
+            opciones.classList.remove('activo');
+        }
+    });
+});
+</script>
 @endsection

@@ -298,9 +298,14 @@
 
         <nav class="menu-modulo">
             <a href="{{ route('menu') }}">Volver al Dashboard</a>
+
             <a href="{{ route('carreras-cupos.index') }}"
                 class="{{ request()->routeIs('carreras-cupos.*') ? 'activo' : '' }}">
                 CU06 - Carreras y Cupos
+            </a>
+
+            <a href="{{ route('grupos.index') }}" class="{{ request()->routeIs('grupos.*') ? 'activo' : '' }}">
+                CU11 - Gestionar Grupos
             </a>
         </nav>
 

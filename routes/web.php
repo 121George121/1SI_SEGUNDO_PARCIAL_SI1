@@ -6,7 +6,7 @@ use App\Http\Controllers\Usuario_Seguridad_y_Auditoria\gestionarUsuariosyRolesCo
 use App\Http\Controllers\Inscripcion_y_Documentacion\documentosController;
 use App\Http\Controllers\Gestion_Academica\gestionarCarrerasYCuposController;
 use App\Http\Controllers\Logistica_Recursos_y_Reportes\gestionarAulasController;
-
+use App\Http\Controllers\Gestion_Academica\gestionarGruposController;
 Route::get('/', function () {
     return redirect()->route('login');
 });
@@ -85,4 +85,17 @@ Route::middleware('auth')->group(function () {
         ->name('aulas.deshabilitar');
     Route::put('/aulas/{id}/habilitar', [gestionarAulasController::class, 'habilitar'])
         ->name('aulas.habilitar');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('/grupos', [gestionarGruposController::class, 'index'])
+        ->name('grupos.index');
+    Route::post('/grupos', [gestionarGruposController::class, 'store'])
+        ->name('grupos.store');
+    Route::put('/grupos/{id}', [gestionarGruposController::class, 'update'])
+        ->name('grupos.update');
+    Route::put('/grupos/{id}/deshabilitar', [gestionarGruposController::class, 'deshabilitar'])
+        ->name('grupos.deshabilitar');
+    Route::put('/grupos/{id}/habilitar', [gestionarGruposController::class, 'habilitar'])
+        ->name('grupos.habilitar');
 });
