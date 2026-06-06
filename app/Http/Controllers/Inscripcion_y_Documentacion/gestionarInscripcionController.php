@@ -484,10 +484,24 @@ class gestionarInscripcionController extends Controller
                 ->withErrors(['error' => 'La inscripción no existe.']);
         }
 
-        $pago = DB::table('pago')
-            ->where('Codigo_inscripcion', $codigo)
-            ->orderBy('Id_pago', 'desc')
-            ->first();
+        $pago = DB::table('pago as pg')
+        ->leftJoin('pago_inscripcion as pi', function ($join) use ($codigo) {
+            $join->on(DB::raw('"pi"."Id_pago"'), '=', DB::raw('"pg"."Id_pago"'))
+                ->where(DB::raw('"pi"."Codigo_inscripcion"'), '=', $codigo);
+        })
+        ->leftJoin('comprobante as co', DB::raw('"co"."Id_comprobante"'), '=', DB::raw('"pi"."Id_comprobante"'))
+        ->select(
+            DB::raw('"pg"."Id_pago" as id_pago'),
+            'pg.concepto_pago',
+            'pg.monto',
+            DB::raw('COALESCE(pi.estado_pago_inscripcion, \'Pendiente\') as estado_pago'),
+            'pi.fecha_pago',
+            'co.nro_comprobante',
+            'co.fecha_emision'
+        )
+        ->whereRaw("LOWER(TRIM(pg.estado_pago)) = 'activo'")
+        ->orderBy(DB::raw('"pg"."Id_pago"'), 'asc')
+        ->first();
 
         $documentos = DB::table('documento as doc')
             ->leftJoin('persona_documento as pd', function ($join) use ($inscripcion) {
@@ -612,10 +626,12 @@ class gestionarInscripcionController extends Controller
 
         $idPostulante = $inscripcion->Id_postulante;
 
+        // 1. Contar documentos destinados a Postulantes
         $totalDocumentos = DB::table('documento')
             ->whereRaw("LOWER(TRIM(destinado_a)) = 'postulantes'")
             ->count();
 
+        // 2. Contar documentos aprobados del postulante
         $documentosAprobados = DB::table('persona_documento as pd')
             ->join('documento as doc', DB::raw('"doc"."Id_documento"'), '=', DB::raw('"pd"."Id_documento"'))
             ->where('pd.Id_persona', $idPostulante)
@@ -623,12 +639,26 @@ class gestionarInscripcionController extends Controller
             ->where('pd.estado', 'Aprobado')
             ->count();
 
-        $pagoLiquidado = DB::table('pago')
-            ->where('Codigo_inscripcion', $codigoInscripcion)
-            ->whereRaw("LOWER(TRIM(estado_pago)) = 'liquidado'")
-            ->exists();
+        // 3. Contar conceptos de pago activos
+        $totalPagosActivos = DB::table('pago')
+            ->whereRaw("LOWER(TRIM(estado_pago)) = 'activo'")
+            ->count();
 
-        if ($totalDocumentos > 0 && $documentosAprobados == $totalDocumentos && $pagoLiquidado) {
+        // 4. Contar pagos liquidados de esa inscripción
+        $pagosLiquidados = DB::table('pago_inscripcion as pi')
+            ->join('pago as pg', DB::raw('"pg"."Id_pago"'), '=', DB::raw('"pi"."Id_pago"'))
+            ->where('pi.Codigo_inscripcion', $codigoInscripcion)
+            ->whereRaw("LOWER(TRIM(pg.estado_pago)) = 'activo'")
+            ->where('pi.estado_pago_inscripcion', 'Liquidado')
+            ->count();
+
+        // 5. Si todo está aprobado y liquidado, queda Inscrito
+        if (
+            $totalDocumentos > 0 &&
+            $documentosAprobados == $totalDocumentos &&
+            $totalPagosActivos > 0 &&
+            $pagosLiquidados == $totalPagosActivos
+        ) {
             DB::table('inscripcion')
                 ->where('Codigo_inscripcion', $codigoInscripcion)
                 ->update([

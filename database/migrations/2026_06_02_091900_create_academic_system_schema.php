@@ -327,17 +327,27 @@ return new class extends Migration
 
         Schema::create('pago', function (Blueprint $table) {
             $table->increments('Id_pago');
+            $table->string('concepto_pago', 50);
             $table->decimal('monto', 10, 2);
-            $table->date('fecha_pago')->default(DB::raw('CURRENT_DATE'));
-            $table->string('metodo_pago', 50);
-            $table->string('estado_pago', 20);
-            $table->text('observaciones')->nullable();
-            $table->unsignedInteger('Id_comprobante');
-            $table->unsignedInteger('Codigo_inscripcion');
+            $table->string('estado_pago', 20)->default('activo');
 
-            $table->foreign('Id_comprobante')
-                ->references('Id_comprobante')
-                ->on('comprobante')
+            $table->text('observaciones')->nullable();
+        });
+
+        Schema::create('pago_inscripcion', function (Blueprint $table) {
+            $table->unsignedInteger('Id_pago');
+            $table->unsignedInteger('Codigo_inscripcion');
+            $table->string('estado_pago_inscripcion', 20)->default('Pendiente');
+
+            $table->date('fecha_pago')->nullable();
+
+            $table->unsignedInteger('Id_comprobante')->nullable();
+
+            $table->primary(['Id_pago', 'Codigo_inscripcion']);
+
+            $table->foreign('Id_pago')
+                ->references('Id_pago')
+                ->on('pago')
                 ->onUpdate('cascade')
                 ->onDelete('cascade');
 
@@ -346,6 +356,12 @@ return new class extends Migration
                 ->on('inscripcion')
                 ->onUpdate('cascade')
                 ->onDelete('cascade');
+
+            $table->foreign('Id_comprobante')
+                ->references('Id_comprobante')
+                ->on('comprobante')
+                ->onUpdate('cascade')
+                ->onDelete('set null');
         });
 
         Schema::create('docente_especialidad', function (Blueprint $table) {

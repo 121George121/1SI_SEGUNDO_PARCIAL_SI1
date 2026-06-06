@@ -9,6 +9,7 @@ use App\Http\Controllers\Logistica_Recursos_y_Reportes\gestionarAulasController;
 use App\Http\Controllers\Gestion_Academica\gestionarGruposController;
 use App\Http\Controllers\Logistica_Recursos_y_Reportes\gestionarDocentesController;
 use App\Http\Controllers\Inscripcion_y_Documentacion\gestionarInscripcionController;
+use App\Http\Controllers\Gestion_Financiera\gestionarPagosController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -143,4 +144,17 @@ Route::middleware('auth')->group(function () {
     ->name('inscripcion.documentos.form');
     Route::post('/inscripcion/{codigo}/documentos', [gestionarInscripcionController::class, 'guardarDocumentos'])
     ->name('inscripcion.documentos.guardar');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('/pagos', [gestionarPagosController::class, 'index'])
+        ->name('pagos.index');
+    Route::post('/pagos', [gestionarPagosController::class, 'store'])
+        ->name('pagos.store');
+    Route::put('/pagos/{id}', [gestionarPagosController::class, 'update'])
+        ->name('pagos.update');
+    Route::delete('/pagos/{id}', [gestionarPagosController::class, 'destroy'])
+        ->name('pagos.destroy');
+    Route::post('/pagos/inscripcion/guardar', [gestionarPagosController::class, 'guardarPagoInscripcion'])
+        ->name('pagos.inscripcion.guardar');
 });

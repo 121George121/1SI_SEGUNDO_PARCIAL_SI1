@@ -107,7 +107,9 @@ main p { font-size:18px; color:#333; margin-bottom:24px; }
         Logística y Reportes
     </div>
 
-    <div>
+    <div onclick="window.location='{{ route('pagos.index') }}'"
+        class="{{ request()->routeIs('pagos.*') ? 'activo' : '' }}"
+        style="cursor:pointer;">
         Gestión Financiera
     </div>
 
