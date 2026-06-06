@@ -293,6 +293,9 @@
 
                         <td>
                             <div class="acciones">
+                                <a href="{{ route('docentes.documentos.form', $docente->id_docente) }}" class="btn-success">
+                                    Validar Documentos
+                                </a>
                                 <details>
                                     <summary>Actualizar Docente</summary>
 
@@ -315,10 +318,7 @@
                                         <input type="email" name="correo" value="{{ $docente->correo }}">
                                         <input type="number" name="anio_servicio" min="0" value="{{ $docente->anio_servicio }}" required>
 
-                                        <select name="estado" required>
-                                            <option value="activo" {{ $docente->estado == 'activo' ? 'selected' : '' }}>Activo</option>
-                                            <option value="inactivo" {{ $docente->estado == 'inactivo' ? 'selected' : '' }}>Inactivo</option>
-                                        </select>
+                                        <input type="hidden" name="estado" value="En_Revision">
 
                                         <input type="text" name="direccion" value="{{ $docente->direccion }}">
 
@@ -333,12 +333,6 @@
                                         <button type="submit" class="btn-warning">Actualizar</button>
                                     </form>
                                 </details>
-
-                                <form action="{{ route('docentes.documentos', $docente->id_docente) }}" method="POST">
-                                    @csrf
-                                    @method('PUT')
-                                    <button type="submit" class="btn-success">Validar Documentos</button>
-                                </form>
 
                                 @if($docente->estado === 'activo')
                                     <form action="{{ route('docentes.deshabilitar', $docente->id_docente) }}" method="POST">

@@ -136,7 +136,7 @@ class gestionarDocentesController extends Controller
             DB::table('docente')->insert([
                 'Id_docente' => $idPersona,
                 'anio_servicio' => $request->anio_servicio,
-                'estado' => $request->estado,
+                'estado' => 'En_Revision',
             ]);
         }
 
@@ -420,6 +420,202 @@ class gestionarDocentesController extends Controller
                 ]);
         }
     }
+
+    public function documentos($id)
+    {
+        $docente = DB::table('docente as d')
+            ->join('persona as p', DB::raw('"p"."Id_persona"'), '=', DB::raw('"d"."Id_docente"'))
+            ->select(
+                DB::raw('"d"."Id_docente" as id_docente'),
+                'p.ci',
+                'p.nombre',
+                'p.apellido',
+                'd.estado'
+            )
+            ->where('d.Id_docente', $id)
+            ->first();
+
+        if (!$docente) {
+            return redirect()->route('docentes.index')
+                ->withErrors(['error' => 'El docente no existe.']);
+        }
+
+        $documentos = DB::table('documento as doc')
+            ->leftJoin('persona_documento as pd', function ($join) use ($id) {
+                $join->on(DB::raw('"pd"."Id_documento"'), '=', DB::raw('"doc"."Id_documento"'))
+                    ->where(DB::raw('"pd"."Id_persona"'), '=', $id);
+            })
+            ->select(
+                DB::raw('"doc"."Id_documento" as id_documento'),
+                'doc.nombre',
+                'doc.tipo_documento',
+                'doc.destinado_a',
+                'doc.descripcion',
+                DB::raw('COALESCE(pd.estado, \'No presentado\') as estado_documento'),
+                'pd.observacion',
+                'pd.fecha_revision'
+            )
+            ->whereRaw("LOWER(TRIM(doc.destinado_a)) = 'docentes'")
+            ->orderBy('doc.nombre')
+            ->get();
+
+        return view('Logistica_Recursos_y_Reportes.documentosDocente', compact('docente', 'documentos'));
+    }
+
+    public function guardarDocumentos(Request $request, $id)
+    {
+        $request->validate([
+            'estado_documento' => 'required|array',
+            'estado_documento.*' => 'required|in:Aprobado,Presentado,Rechazado,No presentado',
+            'observacion' => 'nullable|array',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            $docente = DB::table('docente')
+                ->where('Id_docente', $id)
+                ->first();
+
+            if (!$docente) {
+                DB::rollBack();
+
+                return redirect()->route('docentes.index')
+                    ->withErrors(['error' => 'El docente no existe.']);
+            }
+
+            $idAdministrador = $this->obtenerIdAdministradorActual();
+
+            if (!$idAdministrador) {
+                DB::rollBack();
+
+                return back()->withErrors([
+                    'error' => 'El usuario actual no está registrado en la tabla administrador. Debe existir como administrador para validar documentos.'
+                ]);
+            }
+
+            foreach ($request->estado_documento as $idDocumento => $estado) {
+                $observacion = $request->observacion[$idDocumento] ?? null;
+
+                $existe = DB::table('persona_documento')
+                    ->where('Id_persona', $id)
+                    ->where('Id_documento', $idDocumento)
+                    ->exists();
+
+                if ($existe) {
+                    DB::table('persona_documento')
+                        ->where('Id_persona', $id)
+                        ->where('Id_documento', $idDocumento)
+                        ->update([
+                            'estado' => $estado,
+                            'observacion' => $observacion,
+                            'fecha_revision' => now()->toDateString(),
+                            'Id_administrador' => $idAdministrador,
+                        ]);
+                } else {
+                    DB::table('persona_documento')->insert([
+                        'Id_persona' => $id,
+                        'Id_documento' => $idDocumento,
+                        'estado' => $estado,
+                        'observacion' => $observacion,
+                        'fecha_revision' => now()->toDateString(),
+                        'Id_administrador' => $idAdministrador,
+                    ]);
+                }
+            }
+
+            $this->actualizarEstadoDocentePorDocumentos($id);
+
+            $this->registrarBitacora(
+                'Logistica y Recursos',
+                'Actualizó documentos del docente ID ' . $id . '.'
+            );
+
+            DB::commit();
+
+            return redirect()->route('docentes.documentos.form', $id)
+                ->with('success', 'Documentos actualizados correctamente.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()->withErrors([
+                'error' => 'Error al guardar documentos: ' . $e->getMessage()
+            ]);
+        }
+    }
+    
+    
+    private function actualizarEstadoDocentePorDocumentos($idDocente)
+    {
+        $totalDocumentos = DB::table('documento')
+            ->whereRaw("LOWER(TRIM(destinado_a)) = 'docentes'")
+            ->count();
+
+        if ($totalDocumentos == 0) {
+            return;
+        }
+
+        $documentosAprobados = DB::table('persona_documento as pd')
+            ->join('documento as doc', DB::raw('"doc"."Id_documento"'), '=', DB::raw('"pd"."Id_documento"'))
+            ->where('pd.Id_persona', $idDocente)
+            ->whereRaw("LOWER(TRIM(doc.destinado_a)) = 'docentes'")
+            ->where('pd.estado', 'Aprobado')
+            ->count();
+
+        if ($documentosAprobados == $totalDocumentos) {
+            DB::table('docente')
+                ->where('Id_docente', $idDocente)
+                ->update([
+                    'estado' => 'activo',
+                ]);
+
+            DB::table('persona')
+                ->where('Id_persona', $idDocente)
+                ->update([
+                    'estado' => 'activo',
+                    'tipo_Docente' => true,
+                ]);
+        } else {
+            DB::table('docente')
+                ->where('Id_docente', $idDocente)
+                ->update([
+                    'estado' => 'En_Revision',
+                ]);
+        }
+    }
+
+    private function obtenerIdAdministradorActual()
+    {
+        if (!Auth::check()) {
+            return null;
+        }
+
+        $usuario = DB::table('usuario')
+            ->where('Id_usuario', Auth::id())
+            ->first();
+
+        if (!$usuario) {
+            return null;
+        }
+
+        $idPersona = $usuario->Id_persona ?? null;
+
+        if (!$idPersona) {
+            return null;
+        }
+
+        $existeAdministrador = DB::table('administrador')
+            ->where('Id_administrador', $idPersona)
+            ->exists();
+
+        if (!$existeAdministrador) {
+            return null;
+        }
+
+        return $idPersona;
+    }
+
     private function registrarBitacora($tipo, $descripcion)
     {
         if (Auth::check()) {

@@ -29,6 +29,14 @@
         <a href="{{ route('menu') }}">Volver al Dashboard</a>
         <a href="{{ route('documentos.index') }}" class="{{ request()->routeIs('documentos.*') ? 'activo' : '' }}">CU4 - Gestionar Documentos</a>
     </nav>
+
+    <div class="menu-modulo">
+        <a href="{{ route('inscripcion.index') }}"
+        class="{{ request()->routeIs('inscripcion.*') ? 'activo' : '' }}">
+        CU03 - Gestionar Inscripción
+    </a>
+    </div>
+    
     <div class="logout">
         <form action="{{ route('logout') }}" method="POST">
             @csrf

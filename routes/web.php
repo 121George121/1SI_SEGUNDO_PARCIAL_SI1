@@ -8,6 +8,7 @@ use App\Http\Controllers\Gestion_Academica\gestionarCarrerasYCuposController;
 use App\Http\Controllers\Logistica_Recursos_y_Reportes\gestionarAulasController;
 use App\Http\Controllers\Gestion_Academica\gestionarGruposController;
 use App\Http\Controllers\Logistica_Recursos_y_Reportes\gestionarDocentesController;
+use App\Http\Controllers\Inscripcion_y_Documentacion\gestionarInscripcionController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -121,4 +122,25 @@ Route::middleware('auth')->group(function () {
         ->name('docentes.habilitar');
     Route::delete('/docentes/{id}', [gestionarDocentesController::class, 'destroy'])
     ->name('docentes.destroy');
+    Route::get('/docentes/{id}/documentos', [gestionarDocentesController::class, 'documentos'])
+    ->name('docentes.documentos.form');
+    Route::post('/docentes/{id}/documentos', [gestionarDocentesController::class, 'guardarDocumentos'])
+    ->name('docentes.documentos.guardar');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('/inscripcion', [gestionarInscripcionController::class, 'index'])
+        ->name('inscripcion.index');
+    Route::get('/inscripcion/buscar-ci/{ci}', [gestionarInscripcionController::class, 'buscarPorCi'])
+        ->name('inscripcion.buscarCi');
+    Route::post('/inscripcion', [gestionarInscripcionController::class, 'store'])
+        ->name('inscripcion.store');
+    Route::put('/inscripcion/{id}', [gestionarInscripcionController::class, 'update'])
+        ->name('inscripcion.update');
+    Route::delete('/inscripcion/{id}', [gestionarInscripcionController::class, 'destroy'])
+        ->name('inscripcion.destroy');
+    Route::get('/inscripcion/{codigo}/documentos', [gestionarInscripcionController::class, 'documentos'])
+    ->name('inscripcion.documentos.form');
+    Route::post('/inscripcion/{codigo}/documentos', [gestionarInscripcionController::class, 'guardarDocumentos'])
+    ->name('inscripcion.documentos.guardar');
 });
