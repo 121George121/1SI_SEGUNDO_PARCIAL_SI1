@@ -315,6 +315,11 @@
             <a href="{{ route('horarios.index') }}" class="{{ request()->routeIs('horarios.*') ? 'activo' : '' }}">
                 CU14 - Gestionar Horarios
             </a>
+
+            <a href="{{ route('asignaciones-docentes.index') }}"
+                class="{{ request()->routeIs('asignaciones-docentes.*') ? 'activo' : '' }}">
+                CU15 - Asignar Docentes a Grupos y Materias
+            </a>
         </nav>
 
         <div class="logout">

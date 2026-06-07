@@ -11,6 +11,7 @@ use App\Http\Controllers\Logistica_Recursos_y_Reportes\gestionarDocentesControll
 use App\Http\Controllers\Inscripcion_y_Documentacion\gestionarInscripcionController;
 use App\Http\Controllers\Gestion_Financiera\gestionarPagosController;
 use App\Http\Controllers\Gestion_Academica\gestionarMateriasYHorariosController;
+use App\Http\Controllers\Gestion_Academica\asignarDocentesAGruposYMateriasController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -188,4 +189,18 @@ Route::put('/horarios/{id}', [gestionarMateriasYHorariosController::class, 'upda
 
 Route::delete('/horarios/{id}', [gestionarMateriasYHorariosController::class, 'destroyHorario'])
     ->name('horarios.destroy');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('/asignaciones-docentes', [asignarDocentesAGruposYMateriasController::class, 'index'])
+        ->name('asignaciones-docentes.index');
+
+    Route::post('/asignaciones-docentes', [asignarDocentesAGruposYMateriasController::class, 'store'])
+        ->name('asignaciones-docentes.store');
+
+    Route::put('/asignaciones-docentes/{idGrupo}/{idMateria}', [asignarDocentesAGruposYMateriasController::class, 'update'])
+        ->name('asignaciones-docentes.update');
+
+    Route::delete('/asignaciones-docentes/{idGrupo}/{idMateria}', [asignarDocentesAGruposYMateriasController::class, 'destroy'])
+        ->name('asignaciones-docentes.destroy');
 });
