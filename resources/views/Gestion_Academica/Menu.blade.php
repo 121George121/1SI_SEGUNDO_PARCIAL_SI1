@@ -307,6 +307,14 @@
             <a href="{{ route('grupos.index') }}" class="{{ request()->routeIs('grupos.*') ? 'activo' : '' }}">
                 CU11 - Gestionar Grupos
             </a>
+
+            <a href="{{ route('materias.index') }}" class="{{ request()->routeIs('materias.*') ? 'activo' : '' }}">
+                CU14 - Gestionar Materias
+            </a>
+
+            <a href="{{ route('horarios.index') }}" class="{{ request()->routeIs('horarios.*') ? 'activo' : '' }}">
+                CU14 - Gestionar Horarios
+            </a>
         </nav>
 
         <div class="logout">

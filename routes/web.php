@@ -10,6 +10,7 @@ use App\Http\Controllers\Gestion_Academica\gestionarGruposController;
 use App\Http\Controllers\Logistica_Recursos_y_Reportes\gestionarDocentesController;
 use App\Http\Controllers\Inscripcion_y_Documentacion\gestionarInscripcionController;
 use App\Http\Controllers\Gestion_Financiera\gestionarPagosController;
+use App\Http\Controllers\Gestion_Academica\gestionarMateriasYHorariosController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -157,4 +158,34 @@ Route::middleware('auth')->group(function () {
         ->name('pagos.destroy');
     Route::post('/pagos/inscripcion/guardar', [gestionarPagosController::class, 'guardarPagoInscripcion'])
         ->name('pagos.inscripcion.guardar');
+});
+
+Route::middleware('auth')->group(function () {
+
+    // CU14 - Gestionar Materias
+Route::get('/materias', [gestionarMateriasYHorariosController::class, 'indexMaterias'])
+    ->name('materias.index');
+
+Route::post('/materias', [gestionarMateriasYHorariosController::class, 'storeMateria'])
+    ->name('materias.store');
+
+Route::put('/materias/{id}', [gestionarMateriasYHorariosController::class, 'updateMateria'])
+    ->name('materias.update');
+
+Route::delete('/materias/{id}', [gestionarMateriasYHorariosController::class, 'destroyMateria'])
+    ->name('materias.destroy');
+
+
+// CU14 - Gestionar Horarios
+Route::get('/horarios', [gestionarMateriasYHorariosController::class, 'indexHorarios'])
+    ->name('horarios.index');
+
+Route::post('/horarios', [gestionarMateriasYHorariosController::class, 'storeHorario'])
+    ->name('horarios.store');
+
+Route::put('/horarios/{id}', [gestionarMateriasYHorariosController::class, 'updateHorario'])
+    ->name('horarios.update');
+
+Route::delete('/horarios/{id}', [gestionarMateriasYHorariosController::class, 'destroyHorario'])
+    ->name('horarios.destroy');
 });

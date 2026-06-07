@@ -77,6 +77,7 @@ return new class extends Migration
             $table->string('dia', 20);
             $table->time('hora_inicio');
             $table->time('hora_fin');
+            $table->string('estado', 20)->default('activo');
         });
 
         Schema::create('materia', function (Blueprint $table) {
