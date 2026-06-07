@@ -3,7 +3,7 @@
 @section('content')
 
 <h1 class="titulo">CU11 - Gestionar Grupos</h1>
-<p class="subtitulo">Registrar grupos, editar datos, asignar aula, modalidad, turno y validar capacidad.</p>
+<p class="subtitulo">Registrar grupos, editar datos, asignar aula, modalidad, turno y gestión.</p>
 
 <style>
     .card-box {
@@ -39,8 +39,11 @@
         font-size: 14px;
     }
 
+    .full {
+        grid-column: 1 / 3;
+    }
+
     .btn-primary,
-    .btn-success,
     .btn-warning,
     .btn-danger {
         border: none;
@@ -49,10 +52,11 @@
         color: white;
         cursor: pointer;
         font-weight: bold;
+        text-decoration: none;
+        display: inline-block;
     }
 
     .btn-primary { background: #0b2d6b; }
-    .btn-success { background: #16a34a; }
     .btn-warning { background: #f59e0b; }
     .btn-danger { background: #dc2626; }
 
@@ -139,51 +143,56 @@
         margin-bottom: 8px;
     }
 
+    .search-select {
+        position: relative;
+    }
+
+    .search-input {
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        font-size: 14px;
+        width: 100%;
+    }
+
+    .search-options {
+        display: none;
+        position: absolute;
+        top: 72px;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        max-height: 180px;
+        overflow-y: auto;
+        z-index: 999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+
+    .search-options.activo {
+        display: block;
+    }
+
+    .search-option {
+        padding: 10px;
+        cursor: pointer;
+        color: #333;
+    }
+
+    .search-option:hover {
+        background: #e5e7eb;
+    }
+
     @media (max-width: 768px) {
         .form-grid {
             grid-template-columns: 1fr;
         }
+
+        .full {
+            grid-column: 1;
+        }
     }
-    .search-select {
-    position: relative;
-}
-
-.search-input {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    font-size: 14px;
-    width: 100%;
-}
-
-.search-options {
-    display: none;
-    position: absolute;
-    top: 72px;
-    left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    max-height: 180px;
-    overflow-y: auto;
-    z-index: 999;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-}
-
-.search-options.activo {
-    display: block;
-}
-
-.search-option {
-    padding: 10px;
-    cursor: pointer;
-    color: #333;
-}
-
-.search-option:hover {
-    background: #e5e7eb;
-}
 </style>
 
 @if(session('success'))
@@ -197,7 +206,7 @@
 <div class="card-box">
     <h2 style="color:#0b2d6b; margin-bottom:16px;">Registrar Grupo</h2>
 
-    <form action="{{ route('grupos.store') }}" method="POST" class="form-grid">
+    <form action="{{ route('grupos.store') }}" method="POST" class="form-grid formulario-busqueda">
         @csrf
 
         <div class="form-group">
@@ -218,21 +227,20 @@
         <div class="form-group">
             <label>Estado</label>
             <select name="estado" required>
-                <option value="activo">Activo</option>
-                <option value="inactivo">Inactivo</option>
+                <option value="activo">activo</option>
+                <option value="inactivo">inactivo</option>
             </select>
         </div>
 
         <div class="form-group search-select" data-search-select>
             <label>Aula</label>
-
-            <input type="text" class="search-input" placeholder="Buscar aula..." autocomplete="off" required>
-            <input type="hidden" name="Id_aula">
+            <input type="text" class="search-input" placeholder="Buscar aula..." autocomplete="off">
+            <input type="hidden" name="Id_aula" data-required="true">
 
             <div class="search-options">
                 @foreach($aulas as $aula)
                     <div class="search-option" data-value="{{ $aula->id_aula }}">
-                        {{ $aula->nro_aula }} - Capacidad: {{ $aula->capacidad }}
+                        {{ $aula->nro_aula }} - Capacidad: {{ $aula->capacidad }} - {{ $aula->ubicacion }}
                     </div>
                 @endforeach
             </div>
@@ -240,9 +248,8 @@
 
         <div class="form-group search-select" data-search-select>
             <label>Modalidad</label>
-
-            <input type="text" class="search-input" placeholder="Buscar modalidad..." autocomplete="off" required>
-            <input type="hidden" name="Id_modalidad">
+            <input type="text" class="search-input" placeholder="Buscar modalidad..." autocomplete="off">
+            <input type="hidden" name="Id_modalidad" data-required="true">
 
             <div class="search-options">
                 @foreach($modalidades as $modalidad)
@@ -255,9 +262,8 @@
 
         <div class="form-group search-select" data-search-select>
             <label>Turno</label>
-
-            <input type="text" class="search-input" placeholder="Buscar turno..." autocomplete="off" required>
-            <input type="hidden" name="Id_turno">
+            <input type="text" class="search-input" placeholder="Buscar turno..." autocomplete="off">
+            <input type="hidden" name="Id_turno" data-required="true">
 
             <div class="search-options">
                 @foreach($turnos as $turno)
@@ -269,25 +275,9 @@
         </div>
 
         <div class="form-group search-select" data-search-select>
-            <label>Docente</label>
-
-            <input type="text" class="search-input" placeholder="Buscar docente..." autocomplete="off" required>
-            <input type="hidden" name="Id_docente">
-
-            <div class="search-options">
-                @foreach($docentes as $docente)
-                    <div class="search-option" data-value="{{ $docente->id_docente }}">
-                        {{ $docente->nombre }} {{ $docente->apellido }}
-                    </div>
-                @endforeach
-            </div>
-        </div>
-
-       <div class="form-group search-select" data-search-select>
             <label>Gestión</label>
-
-            <input type="text" class="search-input" placeholder="Buscar gestión..." autocomplete="off" required>
-            <input type="hidden" name="Id_gestion">
+            <input type="text" class="search-input" placeholder="Buscar gestión..." autocomplete="off">
+            <input type="hidden" name="Id_gestion" data-required="true">
 
             <div class="search-options">
                 @foreach($gestiones as $gestion)
@@ -298,26 +288,21 @@
             </div>
         </div>
 
-        <div class="form-group">
-            <label>&nbsp;</label>
-            <button type="submit" class="btn-primary">Registrar Grupo</button>
+        <div class="form-group full">
+            <button type="submit" class="btn-primary">
+                Registrar Grupo
+            </button>
         </div>
     </form>
 </div>
 
 <div class="card-box">
     <h2 style="color:#0b2d6b; margin-bottom:16px;">Grupos Registrados</h2>
-        <div style="margin-bottom:16px;">
-    <label style="font-weight:bold; color:#0b2d6b; display:block; margin-bottom:6px;">
-        Buscar Grupo
-    </label>
 
-    <input 
-        type="text" 
-        id="buscarGrupo" 
-        placeholder="Buscar por grupo, aula, docente, turno, modalidad o gestión..."
-        style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; font-size:14px;"
-    >
+    <div style="margin-bottom:16px;">
+        <label style="font-weight:bold;color:#0b2d6b;">Buscar Grupo</label>
+        <input type="text" id="buscarGrupo" placeholder="Buscar por grupo, aula, modalidad, turno o gestión..."
+               style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;margin-top:6px;">
     </div>
 
     <div class="table-responsive">
@@ -331,7 +316,6 @@
                     <th>Aula</th>
                     <th>Modalidad</th>
                     <th>Turno</th>
-                    <th>Docente</th>
                     <th>Gestión</th>
                     <th>Estado</th>
                     <th>Acciones</th>
@@ -345,29 +329,15 @@
                         <td>{{ $grupo->sigla_grupo }}</td>
                         <td>{{ $grupo->capacidad_max }}</td>
                         <td>{{ $grupo->cant_estudiantes }}</td>
-                        <td>{{ $grupo->nro_aula ?? 'Sin aula' }}</td>
-                        <td>{{ $grupo->nombre_modalidad ?? 'Sin modalidad' }}</td>
-                        <td>{{ $grupo->nombre_turno ?? 'Sin turno' }}</td>
+                        <td>{{ $grupo->nro_aula }} - {{ $grupo->ubicacion }}</td>
+                        <td>{{ $grupo->nombre_modalidad }}</td>
+                        <td>{{ $grupo->nombre_turno }}</td>
+                        <td>{{ $grupo->anio }} - {{ $grupo->periodo }}</td>
                         <td>
-                            @if($grupo->nombre_docente)
-                                {{ $grupo->nombre_docente }} {{ $grupo->apellido_docente }}
-                            @else
-                                Sin docente
-                            @endif
-                        </td>
-                        <td>
-                            @if($grupo->anio)
-                                {{ $grupo->anio }} - {{ $grupo->periodo }}
-                            @else
-                                Sin gestión
-                            @endif
-                        </td>
-                        <td>
-                            <span class="estado estado-{{ $grupo->estado }}">
-                                {{ ucfirst($grupo->estado) }}
+                            <span class="estado {{ strtolower(trim($grupo->estado)) === 'activo' ? 'estado-activo' : 'estado-inactivo' }}">
+                                {{ $grupo->estado }}
                             </span>
                         </td>
-
                         <td>
                             <div class="acciones">
                                 <details>
@@ -378,18 +348,20 @@
                                         @method('PUT')
 
                                         <input type="text" name="sigla_grupo" value="{{ $grupo->sigla_grupo }}" required>
-                                        <input type="number" name="capacidad_max" min="1" value="{{ $grupo->capacidad_max }}" required>
-                                        <input type="number" name="cant_estudiantes" min="0" value="{{ $grupo->cant_estudiantes }}" required>
+
+                                        <input type="number" name="capacidad_max" value="{{ $grupo->capacidad_max }}" min="1" required>
+
+                                        <input type="number" name="cant_estudiantes" value="{{ $grupo->cant_estudiantes }}" min="0" required>
 
                                         <select name="estado" required>
-                                            <option value="activo" {{ $grupo->estado == 'activo' ? 'selected' : '' }}>Activo</option>
-                                            <option value="inactivo" {{ $grupo->estado == 'inactivo' ? 'selected' : '' }}>Inactivo</option>
+                                            <option value="activo" {{ strtolower(trim($grupo->estado)) === 'activo' ? 'selected' : '' }}>activo</option>
+                                            <option value="inactivo" {{ strtolower(trim($grupo->estado)) === 'inactivo' ? 'selected' : '' }}>inactivo</option>
                                         </select>
 
                                         <select name="Id_aula" required>
                                             @foreach($aulas as $aula)
                                                 <option value="{{ $aula->id_aula }}" {{ $grupo->id_aula == $aula->id_aula ? 'selected' : '' }}>
-                                                    {{ $aula->nro_aula }} - Cap: {{ $aula->capacidad }}
+                                                    {{ $aula->nro_aula }} - Capacidad: {{ $aula->capacidad }}
                                                 </option>
                                             @endforeach
                                         </select>
@@ -410,14 +382,6 @@
                                             @endforeach
                                         </select>
 
-                                        <select name="Id_docente" required>
-                                            @foreach($docentes as $docente)
-                                                <option value="{{ $docente->id_docente }}" {{ $grupo->id_docente == $docente->id_docente ? 'selected' : '' }}>
-                                                    {{ $docente->nombre }} {{ $docente->apellido }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-
                                         <select name="Id_gestion" required>
                                             @foreach($gestiones as $gestion)
                                                 <option value="{{ $gestion->id_gestion }}" {{ $grupo->id_gestion == $gestion->id_gestion ? 'selected' : '' }}>
@@ -426,26 +390,15 @@
                                             @endforeach
                                         </select>
 
-                                        <button type="submit" class="btn-warning">Actualizar</button>
+                                        <button type="submit" class="btn-warning">
+                                            Actualizar
+                                        </button>
                                     </form>
                                 </details>
 
-                                @if($grupo->estado === 'activo')
-                                    <form action="{{ route('grupos.deshabilitar', $grupo->id_grupo) }}" method="POST">
-                                        @csrf
-                                        @method('PUT')
-                                        <button type="submit" class="btn-danger">Deshabilitar</button>
-                                    </form>
-                                @else
-                                    <form action="{{ route('grupos.habilitar', $grupo->id_grupo) }}" method="POST">
-                                        @csrf
-                                        @method('PUT')
-                                        <button type="submit" class="btn-success">Habilitar</button>
-                                    </form>
-                                @endif
-                                <form action="{{ route('grupos.destroy', $grupo->id_grupo) }}" 
-                                    method="POST"
-                                    onsubmit="return confirm('¿Seguro que deseas eliminar este grupo definitivamente?')">
+                                <form action="{{ route('grupos.destroy', $grupo->id_grupo) }}"
+                                      method="POST"
+                                      onsubmit="return confirm('¿Seguro que deseas eliminar este grupo?');">
                                     @csrf
                                     @method('DELETE')
 
@@ -458,9 +411,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="11" style="text-align:center; padding:20px;">
-                            No hay grupos registrados.
-                        </td>
+                        <td colspan="10" style="text-align:center;">No hay grupos registrados.</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -468,68 +419,74 @@
     </div>
 </div>
 
-
-<script>
-document.querySelectorAll('[data-search-select]').forEach(function (contenedor) {
-    const input = contenedor.querySelector('.search-input');
-    const hidden = contenedor.querySelector('input[type="hidden"]');
-    const opciones = contenedor.querySelector('.search-options');
-    const items = contenedor.querySelectorAll('.search-option');
-
-    input.addEventListener('focus', function () {
-        opciones.classList.add('activo');
-    });
-
-    input.addEventListener('input', function () {
-        const texto = input.value.toLowerCase();
-
-        hidden.value = '';
-
-        items.forEach(function (item) {
-            const coincide = item.textContent.toLowerCase().includes(texto);
-            item.style.display = coincide ? 'block' : 'none';
-        });
-
-        opciones.classList.add('activo');
-    });
-
-    items.forEach(function (item) {
-        item.addEventListener('click', function () {
-            input.value = item.textContent.trim();
-            hidden.value = item.dataset.value;
-            opciones.classList.remove('activo');
-        });
-    });
-
-    document.addEventListener('click', function (e) {
-        if (!contenedor.contains(e.target)) {
-            opciones.classList.remove('activo');
-        }
-    });
-});
-</script>
-
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const buscador = document.getElementById('buscarGrupo');
-    const tabla = document.getElementById('tablaGrupos');
+    document.querySelectorAll('[data-search-select]').forEach(function (contenedor) {
+        const input = contenedor.querySelector('.search-input');
+        const hidden = contenedor.querySelector('input[type="hidden"]');
+        const opciones = contenedor.querySelector('.search-options');
+        const items = contenedor.querySelectorAll('.search-option');
 
-    if (!buscador || !tabla) return;
+        input.addEventListener('focus', function () {
+            opciones.classList.add('activo');
+        });
 
-    buscador.addEventListener('keyup', function () {
-        const texto = buscador.value.toLowerCase();
-        const filas = tabla.querySelectorAll('tbody tr');
+        input.addEventListener('input', function () {
+            hidden.value = '';
+            const texto = input.value.toLowerCase();
 
-        filas.forEach(function (fila) {
-            const contenidoFila = fila.textContent.toLowerCase();
+            items.forEach(function (item) {
+                const coincide = item.textContent.toLowerCase().includes(texto);
+                item.style.display = coincide ? 'block' : 'none';
+            });
 
-            if (contenidoFila.includes(texto)) {
-                fila.style.display = '';
-            } else {
-                fila.style.display = 'none';
+            opciones.classList.add('activo');
+        });
+
+        items.forEach(function (item) {
+            item.addEventListener('click', function () {
+                input.value = item.textContent.trim();
+                hidden.value = item.dataset.value;
+                opciones.classList.remove('activo');
+            });
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!contenedor.contains(e.target)) {
+                opciones.classList.remove('activo');
             }
         });
     });
+
+    document.querySelectorAll('.formulario-busqueda').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            const campos = form.querySelectorAll('input[type="hidden"][data-required="true"]');
+
+            for (const campo of campos) {
+                if (!campo.value) {
+                    e.preventDefault();
+                    alert('Debe seleccionar Aula, Modalidad, Turno y Gestión desde la lista.');
+                    return;
+                }
+            }
+        });
+    });
+
+    const buscador = document.getElementById('buscarGrupo');
+    const tabla = document.getElementById('tablaGrupos');
+
+    if (buscador && tabla) {
+        buscador.addEventListener('keyup', function () {
+            const texto = buscador.value.toLowerCase();
+            const filas = tabla.querySelectorAll('tbody tr');
+
+            filas.forEach(function (fila) {
+                const contenido = fila.textContent.toLowerCase();
+                fila.style.display = contenido.includes(texto) ? '' : 'none';
+            });
+        });
+    }
 });
 </script>
+
 @endsection

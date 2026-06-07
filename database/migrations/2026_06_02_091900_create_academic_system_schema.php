@@ -383,17 +383,16 @@ return new class extends Migration
                 ->onUpdate('cascade')
                 ->onDelete('cascade');
         });
-
         Schema::create('grupo', function (Blueprint $table) {
             $table->increments('Id_grupo');
             $table->string('sigla_grupo', 50);
             $table->integer('capacidad_max');
             $table->string('estado', 20);
             $table->integer('cant_estudiantes');
+
             $table->unsignedInteger('Id_aula');
             $table->unsignedInteger('Id_modalidad');
             $table->unsignedInteger('Id_turno');
-            $table->unsignedInteger('Id_docente');
             $table->unsignedInteger('Id_gestion');
 
             $table->foreign('Id_aula')
@@ -411,12 +410,6 @@ return new class extends Migration
             $table->foreign('Id_turno')
                 ->references('Id_turno')
                 ->on('turno')
-                ->onUpdate('cascade')
-                ->onDelete('cascade');
-
-            $table->foreign('Id_docente')
-                ->references('Id_docente')
-                ->on('docente')
                 ->onUpdate('cascade')
                 ->onDelete('cascade');
 

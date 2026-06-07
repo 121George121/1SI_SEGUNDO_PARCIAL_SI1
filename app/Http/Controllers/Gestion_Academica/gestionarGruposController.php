@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use App\Models\Gestion_Academica\gestionarGrupos;
 
 class gestionarGruposController extends Controller
 {
@@ -16,8 +15,6 @@ class gestionarGruposController extends Controller
             ->leftJoin('aula as a', DB::raw('"a"."Id_aula"'), '=', DB::raw('"gr"."Id_aula"'))
             ->leftJoin('modalidad as m', DB::raw('"m"."Id_modalidad"'), '=', DB::raw('"gr"."Id_modalidad"'))
             ->leftJoin('turno as t', DB::raw('"t"."Id_turno"'), '=', DB::raw('"gr"."Id_turno"'))
-            ->leftJoin('docente as d', DB::raw('"d"."Id_docente"'), '=', DB::raw('"gr"."Id_docente"'))
-            ->leftJoin('persona as p', DB::raw('"p"."Id_persona"'), '=', DB::raw('"d"."Id_docente"'))
             ->leftJoin('gestion as g', DB::raw('"g"."Id_gestion"'), '=', DB::raw('"gr"."Id_gestion"'))
             ->select(
                 DB::raw('"gr"."Id_grupo" as id_grupo'),
@@ -37,10 +34,6 @@ class gestionarGruposController extends Controller
                 DB::raw('"gr"."Id_turno" as id_turno'),
                 't.nombre as nombre_turno',
 
-                DB::raw('"gr"."Id_docente" as id_docente'),
-                'p.nombre as nombre_docente',
-                'p.apellido as apellido_docente',
-
                 DB::raw('"gr"."Id_gestion" as id_gestion'),
                 'g.anio',
                 'g.periodo'
@@ -56,7 +49,7 @@ class gestionarGruposController extends Controller
                 'ubicacion',
                 'estado'
             )
-            ->where('estado', 'activo')
+            ->whereRaw("LOWER(TRIM(estado)) = 'activo'")
             ->orderBy('nro_aula')
             ->get();
 
@@ -66,7 +59,7 @@ class gestionarGruposController extends Controller
                 'nombre_modalidad',
                 'estado'
             )
-            ->where('estado', 'activo')
+            ->whereRaw("LOWER(TRIM(estado)) = 'activo'")
             ->orderBy('nombre_modalidad')
             ->get();
 
@@ -76,20 +69,8 @@ class gestionarGruposController extends Controller
                 'nombre',
                 'estado'
             )
-            ->where('estado', 'activo')
+            ->whereRaw("LOWER(TRIM(estado)) = 'activo'")
             ->orderBy('nombre')
-            ->get();
-
-        $docentes = DB::table('docente as d')
-            ->join('persona as p', DB::raw('"p"."Id_persona"'), '=', DB::raw('"d"."Id_docente"'))
-            ->select(
-                DB::raw('"d"."Id_docente" as id_docente'),
-                'p.nombre',
-                'p.apellido',
-                'd.estado'
-            )
-            ->where('d.estado', 'activo')
-            ->orderBy('p.nombre')
             ->get();
 
         $gestiones = DB::table('gestion')
@@ -99,8 +80,9 @@ class gestionarGruposController extends Controller
                 'periodo',
                 'estado'
             )
-            ->where('estado', 'activo')
+            ->whereRaw("LOWER(TRIM(estado)) = 'activo'")
             ->orderBy('anio', 'desc')
+            ->orderBy('periodo')
             ->get();
 
         return view('Gestion_Academica.gestionarGrupos', compact(
@@ -108,7 +90,6 @@ class gestionarGruposController extends Controller
             'aulas',
             'modalidades',
             'turnos',
-            'docentes',
             'gestiones'
         ));
     }
@@ -119,11 +100,10 @@ class gestionarGruposController extends Controller
             'sigla_grupo' => 'required|string|max:50',
             'capacidad_max' => 'required|integer|min:1',
             'cant_estudiantes' => 'required|integer|min:0',
-            'estado' => 'required|string|max:20',
+            'estado' => 'required|in:activo,inactivo',
             'Id_aula' => 'required|exists:aula,Id_aula',
             'Id_modalidad' => 'required|exists:modalidad,Id_modalidad',
             'Id_turno' => 'required|exists:turno,Id_turno',
-            'Id_docente' => 'required|exists:docente,Id_docente',
             'Id_gestion' => 'required|exists:gestion,Id_gestion',
         ]);
 
@@ -132,26 +112,22 @@ class gestionarGruposController extends Controller
             ->where('Id_aula', $request->Id_aula)
             ->first();
 
-        if (!$aula) {
-            return back()->withErrors(['error' => 'El aula seleccionada no existe.']);
-        }
-
-        if ($request->capacidad_max > $aula->capacidad) {
+        if ($aula && $aula->capacidad !== null && $request->capacidad_max > $aula->capacidad) {
             return back()->withErrors([
-                'error' => 'La capacidad máxima del grupo no puede superar la capacidad del aula seleccionada.'
-            ]);
+                'error' => 'La capacidad máxima del grupo no puede superar la capacidad del aula.'
+            ])->withInput();
         }
 
         if ($request->cant_estudiantes > $request->capacidad_max) {
             return back()->withErrors([
                 'error' => 'La cantidad de estudiantes no puede superar la capacidad máxima del grupo.'
-            ]);
+            ])->withInput();
         }
 
         DB::beginTransaction();
 
         try {
-            gestionarGrupos::create([
+            DB::table('grupo')->insert([
                 'sigla_grupo' => $request->sigla_grupo,
                 'capacidad_max' => $request->capacidad_max,
                 'estado' => $request->estado,
@@ -159,13 +135,12 @@ class gestionarGruposController extends Controller
                 'Id_aula' => $request->Id_aula,
                 'Id_modalidad' => $request->Id_modalidad,
                 'Id_turno' => $request->Id_turno,
-                'Id_docente' => $request->Id_docente,
                 'Id_gestion' => $request->Id_gestion,
             ]);
 
             $this->registrarBitacora(
                 'Gestion Academica',
-                'Registró el grupo ' . $request->sigla_grupo . ' con aula ' . $aula->nro_aula . '.'
+                'Registró el grupo ' . $request->sigla_grupo . '.'
             );
 
             DB::commit();
@@ -178,7 +153,7 @@ class gestionarGruposController extends Controller
 
             return back()->withErrors([
                 'error' => 'Error al registrar grupo: ' . $e->getMessage()
-            ]);
+            ])->withInput();
         }
     }
 
@@ -188,11 +163,10 @@ class gestionarGruposController extends Controller
             'sigla_grupo' => 'required|string|max:50',
             'capacidad_max' => 'required|integer|min:1',
             'cant_estudiantes' => 'required|integer|min:0',
-            'estado' => 'required|string|max:20',
+            'estado' => 'required|in:activo,inactivo',
             'Id_aula' => 'required|exists:aula,Id_aula',
             'Id_modalidad' => 'required|exists:modalidad,Id_modalidad',
             'Id_turno' => 'required|exists:turno,Id_turno',
-            'Id_docente' => 'required|exists:docente,Id_docente',
             'Id_gestion' => 'required|exists:gestion,Id_gestion',
         ]);
 
@@ -201,133 +175,94 @@ class gestionarGruposController extends Controller
             ->where('Id_aula', $request->Id_aula)
             ->first();
 
-        if ($request->capacidad_max > $aula->capacidad) {
+        if ($aula && $aula->capacidad !== null && $request->capacidad_max > $aula->capacidad) {
             return back()->withErrors([
                 'error' => 'La capacidad máxima del grupo no puede superar la capacidad del aula.'
-            ]);
+            ])->withInput();
         }
 
         if ($request->cant_estudiantes > $request->capacidad_max) {
             return back()->withErrors([
-                'error' => 'La cantidad de estudiantes no puede superar la capacidad máxima.'
-            ]);
+                'error' => 'La cantidad de estudiantes no puede superar la capacidad máxima del grupo.'
+            ])->withInput();
         }
 
-        DB::table('grupo')
-            ->where('Id_grupo', $id)
-            ->update([
-                'sigla_grupo' => $request->sigla_grupo,
-                'capacidad_max' => $request->capacidad_max,
-                'estado' => $request->estado,
-                'cant_estudiantes' => $request->cant_estudiantes,
-                'Id_aula' => $request->Id_aula,
-                'Id_modalidad' => $request->Id_modalidad,
-                'Id_turno' => $request->Id_turno,
-                'Id_docente' => $request->Id_docente,
-                'Id_gestion' => $request->Id_gestion,
-            ]);
+        DB::beginTransaction();
 
-        $this->registrarBitacora(
-            'Gestion Academica',
-            'Actualizó el grupo ' . $request->sigla_grupo . '.'
-        );
+        try {
+            DB::table('grupo')
+                ->where('Id_grupo', $id)
+                ->update([
+                    'sigla_grupo' => $request->sigla_grupo,
+                    'capacidad_max' => $request->capacidad_max,
+                    'estado' => $request->estado,
+                    'cant_estudiantes' => $request->cant_estudiantes,
+                    'Id_aula' => $request->Id_aula,
+                    'Id_modalidad' => $request->Id_modalidad,
+                    'Id_turno' => $request->Id_turno,
+                    'Id_gestion' => $request->Id_gestion,
+                ]);
 
-        return redirect()->route('grupos.index')
-            ->with('success', 'Grupo actualizado correctamente.');
+            $this->registrarBitacora(
+                'Gestion Academica',
+                'Actualizó el grupo ' . $request->sigla_grupo . '.'
+            );
+
+            DB::commit();
+
+            return redirect()->route('grupos.index')
+                ->with('success', 'Grupo actualizado correctamente.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()->withErrors([
+                'error' => 'Error al actualizar grupo: ' . $e->getMessage()
+            ])->withInput();
+        }
     }
 
-    public function deshabilitar($id)
+    public function destroy($id)
     {
-        $grupo = DB::table('grupo')
-            ->select('sigla_grupo')
-            ->where('Id_grupo', $id)
-            ->first();
+        DB::beginTransaction();
 
-        DB::table('grupo')
-            ->where('Id_grupo', $id)
-            ->update([
-                'estado' => 'inactivo',
+        try {
+            DB::table('grupo')
+                ->where('Id_grupo', $id)
+                ->delete();
+
+            $this->registrarBitacora(
+                'Gestion Academica',
+                'Eliminó el grupo ID ' . $id . '.'
+            );
+
+            DB::commit();
+
+            return redirect()->route('grupos.index')
+                ->with('success', 'Grupo eliminado correctamente.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()->withErrors([
+                'error' => 'Error al eliminar grupo: ' . $e->getMessage()
             ]);
-
-        $this->registrarBitacora(
-            'Gestion Academica',
-            'Deshabilitó el grupo ' . ($grupo->sigla_grupo ?? $id) . '.'
-        );
-
-        return redirect()->route('grupos.index')
-            ->with('success', 'Grupo deshabilitado correctamente.');
+        }
     }
 
-    public function habilitar($id)
+    private function registrarBitacora(string $tipo, string $descripcion): void
     {
-        $grupo = DB::table('grupo')
-            ->select('sigla_grupo')
-            ->where('Id_grupo', $id)
-            ->first();
-
-        DB::table('grupo')
-            ->where('Id_grupo', $id)
-            ->update([
-                'estado' => 'activo',
-            ]);
-
-        $this->registrarBitacora(
-            'Gestion Academica',
-            'Habilitó el grupo ' . ($grupo->sigla_grupo ?? $id) . '.'
-        );
-
-        return redirect()->route('grupos.index')
-            ->with('success', 'Grupo habilitado correctamente.');
-    }
-        public function destroy($id)
-        {
-            DB::beginTransaction();
-
-            try {
-                $grupo = DB::table('grupo')
-                    ->where('Id_grupo', $id)
-                    ->first();
-
-                if (!$grupo) {
-                    return redirect()->route('grupos.index')
-                        ->withErrors(['error' => 'El grupo no existe.']);
-                }
-
-                DB::table('grupo')
-                    ->where('Id_grupo', $id)
-                    ->delete();
-
-                $this->registrarBitacora(
-                    'Gestion Academica',
-                    'Eliminó el grupo ' . $grupo->sigla_grupo . '.'
-                );
-
-                DB::commit();
-
-                return redirect()->route('grupos.index')
-                    ->with('success', 'Grupo eliminado correctamente.');
-
-            } catch (\Exception $e) {
-                DB::rollBack();
-
-                return redirect()->route('grupos.index')
-                    ->withErrors([
-                        'error' => 'No se pudo eliminar el grupo: ' . $e->getMessage()
-                    ]);
-            }
+        if (!Auth::check()) {
+            return;
         }
 
-    private function registrarBitacora($tipo, $descripcion)
-    {
-        if (Auth::check()) {
-            DB::table('bitacora')->insert([
-                'tipo' => $tipo,
-                'descripcion' => $descripcion,
-                'fecha' => now()->toDateString(),
-                'hora' => now()->format('H:i:s'),
-                'estado' => 'activo',
-                'Id_usuario' => Auth::id(),
-           ]);
-        }
+        DB::table('bitacora')->insert([
+            'tipo' => $tipo,
+            'descripcion' => $descripcion,
+            'fecha' => now()->toDateString(),
+            'hora' => now()->format('H:i:s'),
+            'estado' => 'activo',
+            'Id_usuario' => Auth::id(),
+        ]);
     }
 }
