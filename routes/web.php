@@ -16,6 +16,7 @@ use App\Http\Controllers\Gestion_Financiera\gestionarPagosController;
 use App\Http\Controllers\Gestion_Academica\gestionarMateriasYHorariosController;
 use App\Http\Controllers\Gestion_Academica\asignarDocentesAGruposYMateriasController;
 use App\Http\Controllers\Gestion_Academica\gestionarEvaluacionesYNotasController;
+use App\Http\Controllers\Gestion_Academica\gestionarPostulantesAGruposController;
 
 
 Route::get('/', function () {
@@ -257,6 +258,18 @@ Route::middleware('auth')->group(function () {
 
     Route::delete('/notas/{id}', [gestionarEvaluacionesYNotasController::class, 'destroyNota'])
         ->name('notas.destroy');
+
+    // CU12 - Asignar Postulantes a Grupos
+    Route::get('/postulantes-grupos', [gestionarPostulantesAGruposController::class, 'index'])
+        ->name('postulantes-grupos.index');
+    Route::post('/postulantes-grupos', [gestionarPostulantesAGruposController::class, 'store'])
+        ->name('postulantes-grupos.store');
+    Route::delete('/postulantes-grupos/{idGrupo}/{idPostulante}', [gestionarPostulantesAGruposController::class, 'destroy'])
+        ->name('postulantes-grupos.destroy');
+    Route::post('/postulantes-grupos/asignacion-general', [gestionarPostulantesAGruposController::class, 'asignacionGeneral'])
+        ->name('postulantes-grupos.general');
+
+
 });
 
 Route::middleware('auth')->group(function () {

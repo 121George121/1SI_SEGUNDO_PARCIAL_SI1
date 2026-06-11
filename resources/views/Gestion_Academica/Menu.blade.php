@@ -308,6 +308,12 @@
                 CU11 - Gestionar Grupos
             </a>
 
+            <a href="{{ route('postulantes-grupos.index') }}" class="{{ request()->routeIs('postulantes-grupos.*') ? 'activo' : '' }}">
+                CU12 - Asignar Postulantes a Grupos
+            </a>
+
+
+
             <a href="{{ route('gestiones.index') }}" class="{{ request()->routeIs('gestiones.*') ? 'activo' : '' }}">
                 Gestionar Gestiones
             </a>
