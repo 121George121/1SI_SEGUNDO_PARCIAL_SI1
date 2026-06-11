@@ -158,7 +158,7 @@ class documentosController extends Controller
         }
 
         return DB::table('administrador')
-            ->where('Id_persona', $idPersona)
+            ->where('Id_administrador', $idPersona)
             ->value('Id_administrador');
     }
 

@@ -113,9 +113,10 @@ class autenticacionController extends Controller
             return $resultado;
         }
 
-        return redirect()->route('password.reset.form')->with([
-            'correo_recuperacion' => $request->correo,
-            'success' => 'Se envio un codigo de recuperacion a tu correo.',
+        session(['correo_recuperacion' => $request->correo]);
+
+        return redirect()->route('password.verify.form')->with([
+            'success' => 'Se envió un código de recuperación a tu correo.',
         ]);
     }
 
@@ -125,7 +126,7 @@ class autenticacionController extends Controller
 
         if (!$correo) {
             return redirect()->route('password.forgot')->withErrors([
-                'correo' => 'Primero debes solicitar un codigo de recuperacion.',
+                'correo' => 'Primero debes solicitar un código de recuperación.',
             ]);
         }
 
@@ -141,9 +142,63 @@ class autenticacionController extends Controller
             return $resultado;
         }
 
+        session(['correo_recuperacion' => $correo]);
+
+        return redirect()->route('password.verify.form')->with([
+            'success' => 'Se reenvió un nuevo código a tu correo.',
+        ]);
+    }
+
+    public function mostrarFormularioVerificarCodigo(Request $request): View|RedirectResponse
+    {
+        $correo = session('correo_recuperacion');
+        if (!$correo) {
+            return redirect()->route('password.forgot')->withErrors([
+                'correo' => 'Primero solicita un código de recuperación.',
+            ]);
+        }
+
+        return view('Usuario_Seguridad_y_Auditoria.VerificarCodigo', compact('correo'));
+    }
+
+    public function verificarCodigo(Request $request): RedirectResponse
+    {
+        $correo = session('correo_recuperacion');
+        if (!$correo) {
+            return redirect()->route('password.forgot')->withErrors([
+                'correo' => 'Primero debes solicitar un código de recuperación.',
+            ]);
+        }
+
+        $request->validate([
+            'codigo' => ['required', 'digits:6'],
+        ]);
+
+        $token = DB::table('password_reset_tokens')->where('email', $correo)->first();
+        if (!$token) {
+            return back()->withErrors([
+                'codigo' => 'No hay solicitud de recuperación activa. Usa Volver a enviar.',
+            ])->withInput($request->only('codigo'));
+        }
+
+        if (now()->diffInMinutes(\Illuminate\Support\Carbon::parse($token->created_at)) > 10) {
+            DB::table('password_reset_tokens')->where('email', $correo)->delete();
+
+            return back()->withErrors([
+                'codigo' => 'El código expiró. Usa Volver a enviar.',
+            ])->withInput($request->only('codigo'));
+        }
+
+        if (!Hash::check($request->codigo, $token->token)) {
+            return back()->withErrors([
+                'codigo' => 'El código es incorrecto.',
+            ])->withInput($request->only('codigo'));
+        }
+
+        session(['codigo_verificado' => true]);
+
         return redirect()->route('password.reset.form')->with([
-            'correo_recuperacion' => $correo,
-            'success' => 'Se reenvio un nuevo codigo a tu correo.',
+            'success' => 'Código verificado correctamente. Ahora ingresa tu nueva contraseña.',
         ]);
     }
 
@@ -151,7 +206,13 @@ class autenticacionController extends Controller
     {
         if (!session('correo_recuperacion')) {
             return redirect()->route('password.forgot')->withErrors([
-                'correo' => 'Primero solicita un codigo de recuperacion.',
+                'correo' => 'Primero solicita un código de recuperación.',
+            ]);
+        }
+
+        if (!session('codigo_verificado')) {
+            return redirect()->route('password.verify.form')->withErrors([
+                'codigo' => 'Debes verificar primero tu código de seguridad.',
             ]);
         }
 
@@ -161,15 +222,21 @@ class autenticacionController extends Controller
     public function cambiarContrasena(Request $request): RedirectResponse
     {
         $correo = session('correo_recuperacion');
+        $verificado = session('codigo_verificado');
 
         if (!$correo) {
             return redirect()->route('password.forgot')->withErrors([
-                'correo' => 'Primero debes solicitar un codigo de recuperacion.',
+                'correo' => 'Primero debes solicitar un código de recuperación.',
+            ]);
+        }
+
+        if (!$verificado) {
+            return redirect()->route('password.verify.form')->withErrors([
+                'codigo' => 'Debes verificar primero tu código de seguridad.',
             ]);
         }
 
         $request->validate([
-            'codigo' => ['required', 'digits:6'],
             'contrasena' => [
                 'required',
                 'string',
@@ -181,29 +248,8 @@ class autenticacionController extends Controller
                 'confirmed',
             ],
         ], [
-            'contrasena.regex' => 'La contrasena debe tener mayusculas, minusculas, numeros y caracteres especiales.',
+            'contrasena.regex' => 'La contraseña debe tener mayúsculas, minúsculas, números y caracteres especiales.',
         ]);
-
-        $token = DB::table('password_reset_tokens')->where('email', $correo)->first();
-        if (!$token) {
-            return back()->withErrors([
-                'codigo' => 'No hay solicitud de recuperacion activa. Usa Volver a enviar.',
-            ])->withInput($request->only('codigo'));
-        }
-
-        if (now()->diffInMinutes(\Illuminate\Support\Carbon::parse($token->created_at)) > 10) {
-            DB::table('password_reset_tokens')->where('email', $correo)->delete();
-
-            return back()->withErrors([
-                'codigo' => 'El codigo expiro. Usa Volver a enviar.',
-            ])->withInput($request->only('codigo'));
-        }
-
-        if (!Hash::check($request->codigo, $token->token)) {
-            return back()->withErrors([
-                'codigo' => 'El codigo es incorrecto.',
-            ])->withInput($request->only('codigo'));
-        }
 
         autenticacion::where('correo', $correo)->update([
             'contrasena' => Hash::make($request->contrasena),
@@ -211,8 +257,9 @@ class autenticacionController extends Controller
 
         DB::table('password_reset_tokens')->where('email', $correo)->delete();
         session()->forget('correo_recuperacion');
+        session()->forget('codigo_verificado');
 
-        return redirect()->route('login')->with('success', 'Contrasena actualizada correctamente.');
+        return redirect()->route('login')->with('success', 'Contraseña actualizada correctamente.');
     }
 
     private function enviarCodigoPorCorreo(string $correo, autenticacion $usuario): ?RedirectResponse

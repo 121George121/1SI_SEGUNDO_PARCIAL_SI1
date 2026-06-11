@@ -238,10 +238,17 @@ return new class extends Migration
             $table->string('estado', 20);
             $table->date('fecha_inscripcion')->default(DB::raw('CURRENT_DATE'));
             $table->unsignedInteger('Id_postulante');
+            $table->unsignedInteger('Id_gestion');
 
             $table->foreign('Id_postulante')
                 ->references('Id_postulante')
                 ->on('postulante')
+                ->onUpdate('cascade')
+                ->onDelete('cascade');
+
+            $table->foreign('Id_gestion')
+                ->references('Id_gestion')
+                ->on('gestion')
                 ->onUpdate('cascade')
                 ->onDelete('cascade');
         });

@@ -108,7 +108,7 @@ main p { font-size:18px; color:#333; margin-bottom:24px; }
     </div>
 
     <div onclick="window.location='{{ route('pagos.index') }}'"
-        class="{{ request()->routeIs('pagos.*') ? 'activo' : '' }}"
+        class="{{ request()->routeIs('pagos.*') || request()->routeIs('gestion-financiera.*') || request()->routeIs('paypal.*') ? 'activo' : '' }}"
         style="cursor:pointer;">
         Gestión Financiera
     </div>

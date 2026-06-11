@@ -3,7 +3,7 @@
 @section('content')
 
 <h1 class="titulo">CU05 - Gestionar Pagos</h1>
-<p class="subtitulo">Generar conceptos de pago y procesar pagos de inscripción.</p>
+<p class="subtitulo">Generar conceptos de pago, asignar aranceles y procesar pagos mediante pasarelas o registro manual.</p>
 
 <style>
     .card-box {
@@ -57,6 +57,8 @@
         font-weight: bold;
         text-decoration: none;
         display: inline-block;
+        font-size: 14px;
+        text-align: center;
     }
 
     .btn-primary { background: #0b2d6b; }
@@ -136,7 +138,6 @@
     details summary {
         cursor: pointer;
         font-weight: bold;
-        color: #0b2d6b;
         margin-bottom: 8px;
     }
 
@@ -153,6 +154,53 @@
         border-radius: 6px;
     }
 
+    /* Cards de totales */
+    .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .card {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+        text-align: center;
+        border-top: 4px solid #0b2d6b;
+    }
+
+    .card h2 {
+        font-size: 14px;
+        color: #777;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .card p {
+        font-size: 24px;
+        font-weight: bold;
+        color: #0b2d6b;
+        margin-bottom: 4px;
+    }
+
+    .card span {
+        font-size: 13px;
+        color: #6b7280;
+    }
+
+    .card .highlight-green {
+        color: #16a34a;
+        font-weight: bold;
+    }
+
+    .card .highlight-amber {
+        color: #d97706;
+        font-weight: bold;
+    }
+
     @media (max-width: 768px) {
         .form-grid {
             grid-template-columns: 1fr;
@@ -160,6 +208,10 @@
 
         .full {
             grid-column: 1;
+        }
+        
+        .cards {
+            grid-template-columns: 1fr;
         }
     }
 </style>
@@ -172,41 +224,124 @@
     <div class="alert-error">{{ $errors->first() }}</div>
 @endif
 
-<div class="card-box">
-    <h2 style="color:#0b2d6b; margin-bottom:16px;">Generar Concepto de Pago</h2>
+@php
+    $pagosPendientes = $pagosInscripcion->where('estado_pago_inscripcion', 'Pendiente');
+    $pagosLiquidados = $pagosInscripcion->where('estado_pago_inscripcion', 'Liquidado');
+    
+    $cantPendientes = $pagosPendientes->count();
+    $montoPendiente = $pagosPendientes->sum('monto');
+    
+    $cantRealizados = $pagosLiquidados->count();
+    $totalPagado = $pagosLiquidados->sum('monto');
+    
+    $ultimoPago = '-';
+    if ($cantRealizados > 0) {
+        $ultimoPago = $pagosLiquidados->max('fecha_pago') ?? '-';
+    }
+@endphp
 
-    <form action="{{ route('pagos.store') }}" method="POST" class="form-grid">
-        @csrf
+<!-- Panel de Totales -->
+<div class="cards">
+    <div class="card">
+        <h2>Pagos Pendientes</h2>
+        <p>Bs. {{ number_format($montoPendiente, 2) }}</p>
+        <span class="highlight-amber">{{ $cantPendientes }} pago(s) pendiente(s)</span>
+    </div>
+    <div class="card" style="border-top-color: #16a34a;">
+        <h2>Total Recaudado</h2>
+        <p>Bs. {{ number_format($totalPagado, 2) }}</p>
+        <span class="highlight-green">{{ $cantRealizados }} pago(s) liquidado(s)</span>
+    </div>
+    <div class="card" style="border-top-color: #f59e0b;">
+        <h2>Último Pago</h2>
+        <p style="font-size: 20px; padding: 3px 0;">{{ $ultimoPago }}</p>
+        <span>Fecha de última transacción</span>
+    </div>
+</div>
 
-        <div class="form-group">
-            <label>Concepto de Pago</label>
-            <input type="text" name="concepto_pago" placeholder="Ej: Pago Inscripción" required>
-        </div>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+    <!-- Generar Concepto de Pago -->
+    <div class="card-box" style="margin-bottom: 0;">
+        <h2 style="color:#0b2d6b; margin-bottom:16px;">Generar Concepto de Pago</h2>
 
-        <div class="form-group">
-            <label>Monto</label>
-            <input type="number" step="0.01" name="monto" placeholder="Ej: 350" required>
-        </div>
+        <form action="{{ route('pagos.store') }}" method="POST" class="form-grid">
+            @csrf
 
-        <div class="form-group">
-            <label>Estado</label>
-            <select name="estado_pago" required>
-                <option value="activo">Activo</option>
-                <option value="inactivo">Inactivo</option>
-            </select>
-        </div>
+            <div class="form-group">
+                <label>Concepto de Pago</label>
+                <input type="text" name="concepto_pago" placeholder="Ej: Pago Inscripción" required>
+            </div>
 
-        <div class="form-group full">
-            <label>Observaciones</label>
-            <textarea name="observaciones" placeholder="Descripción del pago"></textarea>
-        </div>
+            <div class="form-group">
+                <label>Monto (Bs.)</label>
+                <input type="number" step="0.01" name="monto" placeholder="Ej: 350" required>
+            </div>
 
-        <div class="form-group full">
-            <button type="submit" class="btn-primary">
-                Registrar Concepto
-            </button>
-        </div>
-    </form>
+            <div class="form-group">
+                <label>Estado</label>
+                <select name="estado_pago" required>
+                    <option value="activo">Activo</option>
+                    <option value="inactivo">Inactivo</option>
+                </select>
+            </div>
+
+            <div class="form-group full">
+                <label>Observaciones</label>
+                <textarea name="observaciones" placeholder="Descripción del concepto" rows="2"></textarea>
+            </div>
+
+            <div class="form-group full">
+                <button type="submit" class="btn-primary">
+                    Registrar Concepto
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Asignar Concepto de Pago a Postulante -->
+    <div class="card-box" style="margin-bottom: 0;">
+        <h2 style="color:#0b2d6b; margin-bottom:16px;">Asignar Concepto de Pago</h2>
+
+        <form action="{{ route('pagos.asignar') }}" method="POST" class="form-grid">
+            @csrf
+
+            <div class="form-group">
+                <label>Concepto de Pago</label>
+                <select name="Id_pago" required>
+                    <option value="">Seleccione un concepto...</option>
+                    @foreach($conceptos as $concepto)
+                        @if($concepto->estado_pago == 'activo')
+                            <option value="{{ $concepto->id_pago }}">
+                                {{ $concepto->concepto_pago }} - Bs. {{ $concepto->monto }}
+                            </option>
+                        @endif
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Postulante / Inscripción</label>
+                <select name="Codigo_inscripcion">
+                    <option value="">Seleccione una inscripción (para asignación individual)...</option>
+                    @foreach($inscripciones as $inscripcion)
+                        <option value="{{ $inscripcion->codigo_inscripcion }}">
+                            CI: {{ $inscripcion->ci }} - {{ $inscripcion->nombre }} {{ $inscripcion->apellido }} (#{{ $inscripcion->codigo_inscripcion }})
+                        </option>
+                    @endforeach
+                </select>
+                <small style="color: #6b7280; margin-top: 4px;">Dejar vacío si va a asignar a todos los postulantes.</small>
+            </div>
+
+            <div class="form-group full" style="margin-top: 30px; display: flex; gap: 10px;">
+                <button type="submit" class="btn-success" style="flex: 1;">
+                    Asignar Individual
+                </button>
+                <button type="submit" name="asignar_todos" value="1" class="btn-danger" style="flex: 1; background: #d97706;">
+                    Asignar a Todos
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <div class="card-box">
@@ -230,33 +365,39 @@
                     <tr>
                         <td>{{ $concepto->id_pago }}</td>
                         <td>{{ $concepto->concepto_pago }}</td>
-                        <td>{{ $concepto->monto }}</td>
+                        <td>Bs. {{ number_format($concepto->monto, 2) }}</td>
                         <td>
                             <span class="estado {{ $concepto->estado_pago == 'activo' ? 'estado-ok' : 'estado-error' }}">
-                                {{ $concepto->estado_pago }}
+                                {{ ucfirst($concepto->estado_pago) }}
                             </span>
                         </td>
                         <td>{{ $concepto->observaciones ?? '-' }}</td>
                         <td>
-                            <div class="acciones">
-                                <details>
-                                    <summary>Editar Concepto</summary>
-
-                                    <form action="{{ route('pagos.update', $concepto->id_pago) }}" method="POST" class="inline-form">
+                            <div style="display: flex; gap: 8px;">
+                                <details style="position: relative;">
+                                    <summary class="btn-warning" style="list-style: none; padding: 6px 12px; border-radius: 6px;">Editar</summary>
+                                    
+                                    <form action="{{ route('pagos.update', $concepto->id_pago) }}" method="POST" class="inline-form" style="position: absolute; background: white; border: 1px solid #ccc; padding: 12px; border-radius: 8px; z-index: 10; width: 280px; top: 30px; left: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
                                         @csrf
                                         @method('PUT')
 
-                                        <input type="text" name="concepto_pago" value="{{ $concepto->concepto_pago }}" required>
-                                        <input type="number" step="0.01" name="monto" value="{{ $concepto->monto }}" required>
+                                        <div style="margin-bottom: 8px;">
+                                            <input type="text" name="concepto_pago" value="{{ $concepto->concepto_pago }}" placeholder="Concepto" required style="width:100%;">
+                                        </div>
+                                        <div style="margin-bottom: 8px;">
+                                            <input type="number" step="0.01" name="monto" value="{{ $concepto->monto }}" placeholder="Monto" required style="width:100%;">
+                                        </div>
+                                        <div style="margin-bottom: 8px;">
+                                            <select name="estado_pago" required style="width:100%;">
+                                                <option value="activo" {{ $concepto->estado_pago == 'activo' ? 'selected' : '' }}>Activo</option>
+                                                <option value="inactivo" {{ $concepto->estado_pago == 'inactivo' ? 'selected' : '' }}>Inactivo</option>
+                                            </select>
+                                        </div>
+                                        <div style="margin-bottom: 8px;">
+                                            <input type="text" name="observaciones" value="{{ $concepto->observaciones }}" placeholder="Observaciones" style="width:100%;">
+                                        </div>
 
-                                        <select name="estado_pago" required>
-                                            <option value="activo" {{ $concepto->estado_pago == 'activo' ? 'selected' : '' }}>Activo</option>
-                                            <option value="inactivo" {{ $concepto->estado_pago == 'inactivo' ? 'selected' : '' }}>Inactivo</option>
-                                        </select>
-
-                                        <input type="text" name="observaciones" value="{{ $concepto->observaciones }}">
-
-                                        <button type="submit" class="btn-warning">
+                                        <button type="submit" class="btn-warning" style="width: 100%;">
                                             Actualizar
                                         </button>
                                     </form>
@@ -268,7 +409,7 @@
                                     @csrf
                                     @method('DELETE')
 
-                                    <button type="submit" class="btn-danger">
+                                    <button type="submit" class="btn-danger" style="padding: 6px 12px; border-radius: 6px;">
                                         Eliminar
                                     </button>
                                 </form>
@@ -334,7 +475,7 @@
                             </span>
                         </td>
                         <td>{{ $item->concepto_pago }}</td>
-                        <td>{{ $item->monto }}</td>
+                        <td>Bs. {{ number_format($item->monto, 2) }}</td>
                         <td>
                             @if($item->estado_pago_inscripcion == 'Liquidado')
                                 <span class="estado estado-ok">Liquidado</span>
@@ -344,42 +485,68 @@
                                 <span class="estado estado-revision">Pendiente</span>
                             @endif
                         </td>
-                        <td>{{ $item->nro_comprobante ?? 'Sin comprobante' }}</td>
+                        <td>
+                            @if($item->id_comprobante)
+                                <a href="{{ route('emitirComprobante', $item->id_comprobante) }}" target="_blank" style="color: #0b2d6b; font-weight: bold; text-decoration: underline;">
+                                    {{ $item->nro_comprobante }}
+                                </a>
+                            @else
+                                Sin comprobante
+                            @endif
+                        </td>
                         <td>{{ $item->fecha_pago ?? '-' }}</td>
                         <td>
-                            <details>
-                                <summary>Procesar Pago</summary>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                @if($item->estado_pago_inscripcion !== 'Liquidado')
+                                    <!-- Botón PayPal -->
+                                    <form action="{{ route('pagos.paypal.pagar', [$item->id_pago, $item->codigo_inscripcion]) }}" method="POST" style="margin:0;">
+                                        @csrf
+                                        <button type="submit" class="btn-primary" style="background:#0070ba; padding: 6px 12px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                                            PayPal
+                                        </button>
+                                    </form>
 
-                                <form action="{{ route('pagos.inscripcion.guardar') }}" method="POST" class="inline-form">
-                                    @csrf
+                                    <!-- Procesamiento Manual -->
+                                    <details style="position: relative;">
+                                        <summary class="btn-success" style="list-style: none; padding: 6px 12px; border-radius: 6px; text-align: center;">Manual</summary>
+                                        
+                                        <form action="{{ route('pagos.inscripcion.guardar') }}" method="POST" class="inline-form" style="position: absolute; background: white; border: 1px solid #ccc; padding: 12px; border-radius: 8px; z-index: 10; width: 280px; top: 30px; right: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15); text-align: left;">
+                                            @csrf
+                                            <input type="hidden" name="Id_pago" value="{{ $item->id_pago }}">
+                                            <input type="hidden" name="Codigo_inscripcion" value="{{ $item->codigo_inscripcion }}">
 
-                                    <input type="hidden" name="Id_pago" value="{{ $item->id_pago }}">
-                                    <input type="hidden" name="Codigo_inscripcion" value="{{ $item->codigo_inscripcion }}">
+                                            <div style="margin-bottom: 8px;">
+                                                <label style="font-weight: bold; font-size: 12px; color:#0b2d6b;">Estado</label>
+                                                <select name="estado_pago_inscripcion" required style="width: 100%;">
+                                                    <option value="Pendiente" {{ $item->estado_pago_inscripcion == 'Pendiente' ? 'selected' : '' }}>Pendiente</option>
+                                                    <option value="Liquidado" {{ $item->estado_pago_inscripcion == 'Liquidado' ? 'selected' : '' }}>Liquidado</option>
+                                                    <option value="Rechazado" {{ $item->estado_pago_inscripcion == 'Rechazado' ? 'selected' : '' }}>Rechazado</option>
+                                                </select>
+                                            </div>
+                                            <div style="margin-bottom: 8px;">
+                                                <label style="font-weight: bold; font-size: 12px; color:#0b2d6b;">Nro Comprobante</label>
+                                                <input type="text" name="nro_comprobante" value="{{ $item->nro_comprobante }}" placeholder="Opcional" style="width: 100%;">
+                                            </div>
+                                            <div style="margin-bottom: 8px;">
+                                                <label style="font-weight: bold; font-size: 12px; color:#0b2d6b;">Fecha Emisión</label>
+                                                <input type="date" name="fecha_emision" value="{{ $item->fecha_emision ? substr($item->fecha_emision, 0, 10) : date('Y-m-d') }}" style="width: 100%;">
+                                            </div>
 
-                                    <select name="estado_pago_inscripcion" required>
-                                        <option value="Pendiente" {{ $item->estado_pago_inscripcion == 'Pendiente' ? 'selected' : '' }}>Pendiente</option>
-                                        <option value="Liquidado" {{ $item->estado_pago_inscripcion == 'Liquidado' ? 'selected' : '' }}>Liquidado</option>
-                                        <option value="Rechazado" {{ $item->estado_pago_inscripcion == 'Rechazado' ? 'selected' : '' }}>Rechazado</option>
-                                    </select>
-
-                                    <input 
-                                        type="text" 
-                                        name="nro_comprobante" 
-                                        value="{{ $item->nro_comprobante }}"
-                                        placeholder="Nro comprobante"
-                                    >
-
-                                    <input 
-                                        type="date" 
-                                        name="fecha_emision" 
-                                        value="{{ $item->fecha_emision ? substr($item->fecha_emision, 0, 10) : date('Y-m-d') }}"
-                                    >
-
-                                    <button type="submit" class="btn-success">
-                                        Guardar Pago
-                                    </button>
-                                </form>
-                            </details>
+                                            <button type="submit" class="btn-success" style="width: 100%;">
+                                                Guardar
+                                            </button>
+                                        </form>
+                                    </details>
+                                @else
+                                    @if($item->id_comprobante)
+                                        <a href="{{ route('emitirComprobante', $item->id_comprobante) }}" class="btn-secondary" style="padding: 6px 12px; border-radius: 6px; background: #4b5563;" target="_blank">
+                                            PDF
+                                        </a>
+                                    @else
+                                        <span style="color: #6b7280; font-size: 13px;">Liquidado</span>
+                                    @endif
+                                @endif
+                            </div>
                         </td>
                     </tr>
                 @empty

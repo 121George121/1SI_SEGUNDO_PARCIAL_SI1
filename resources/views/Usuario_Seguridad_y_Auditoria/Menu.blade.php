@@ -38,6 +38,7 @@
     <nav class="menu-modulo">
         <a href="{{ route('menu') }}">Volver al Dashboard</a>
         <a href="{{ route('usuarios.index') }}" class="{{ request()->routeIs('usuarios.*') ? 'activo' : '' }}">CU2 - Usuarios y Roles</a>
+        <a href="{{ route('bitacora.index') }}" class="{{ request()->routeIs('bitacora.*') ? 'activo' : '' }}">CU19 - Gestionar Bitácora</a>
     </nav>
     <div class="logout">
         <form action="{{ route('logout') }}" method="POST">

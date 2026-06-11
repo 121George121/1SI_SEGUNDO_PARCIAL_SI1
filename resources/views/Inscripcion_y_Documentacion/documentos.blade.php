@@ -88,6 +88,9 @@
     .acciones { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
     .observacion-input { padding: 7px; border: 1px solid #ccc; border-radius: 6px; width: 150px; }
     .section-desc { color: #666; font-size: 14px; margin-bottom: 16px; }
+    .tab-btn { border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.25s ease; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; }
+    .tab-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.12); }
+    .tab-btn:active { transform: translateY(0); }
     @media (max-width: 768px) { .doc-form { grid-template-columns: 1fr; } .full { grid-column: 1; } }
 </style>
 
@@ -143,6 +146,16 @@
     <h2 style="color:#0b2d6b; margin-bottom: 8px;">Requisitos documentales</h2>
     <p class="section-desc">Catalogo general de documentos requeridos segun el tipo de usuario.</p>
 
+    <!-- Separador por tipo de usuario en botones/pestañas -->
+    <div class="tab-navigation" style="display: flex; gap: 12px; margin-bottom: 18px; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px;">
+        <button type="button" class="tab-btn" id="btn-req-postulantes" onclick="showRequisitos('Postulantes')" style="background: #0b2d6b; color: white;">
+            DOCUMENTOS POSTULANTES
+        </button>
+        <button type="button" class="tab-btn" id="btn-req-docentes" onclick="showRequisitos('Docentes')" style="background: #e5e7eb; color: #333;">
+            DOCUMENTOS DOCENTES
+        </button>
+    </div>
+
     <div class="table-responsive">
         <table class="doc-table">
             <thead>
@@ -157,7 +170,7 @@
             </thead>
             <tbody>
                 @forelse($requisitos as $req)
-                    <tr>
+                    <tr class="fila-requisito" data-destinado="{{ $req->destinado_a }}">
                         <td>{{ $req->nombre }}</td>
                         <td>{{ $req->tipo_documento }}</td>
                         <td><span class="badge">{{ $req->destinado_a }}</span></td>
@@ -189,6 +202,9 @@
                         <td colspan="6" style="text-align:center; padding: 20px;">No hay requisitos registrados.</td>
                     </tr>
                 @endforelse
+                <tr id="no-requisitos-row" style="display: none;">
+                    <td colspan="6" style="text-align:center; padding: 20px; color: #777;">No hay requisitos registrados para esta categoría.</td>
+                </tr>
             </tbody>
         </table>
     </div>
@@ -198,6 +214,16 @@
 <div class="doc-container">
     <h2 style="color:#0b2d6b; margin-bottom: 8px;">Documentos presentados</h2>
     <p class="section-desc">Documentos entregados por personas. Aqui se validan u observan.</p>
+
+    <!-- Separador por tipo de usuario en botones/pestañas -->
+    <div class="tab-navigation" style="display: flex; gap: 12px; margin-bottom: 18px; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px;">
+        <button type="button" class="tab-btn" id="btn-ent-postulantes" onclick="showEntregas('Postulantes')" style="background: #0b2d6b; color: white;">
+            DOCUMENTOS POSTULANTES
+        </button>
+        <button type="button" class="tab-btn" id="btn-ent-docentes" onclick="showEntregas('Docentes')" style="background: #e5e7eb; color: #333;">
+            DOCUMENTOS DOCENTES
+        </button>
+    </div>
 
     <div class="table-responsive">
         <table class="doc-table">
@@ -215,7 +241,7 @@
             </thead>
             <tbody>
                 @foreach($entregas as $item)
-                    <tr>
+                    <tr class="fila-entrega" data-destinado="{{ $item->destinado_a }}">
                         <td>{{ $item->ci }}</td>
                         <td>{{ $item->nombre_persona }} {{ $item->apellido }}</td>
                         <td>{{ $item->nombre_documento }}</td>
@@ -240,6 +266,9 @@
                         </td>
                     </tr>
                 @endforeach
+                <tr id="no-entregas-row" style="display: none;">
+                    <td colspan="8" style="text-align:center; padding: 20px; color: #777;">No hay documentos presentados en esta categoría.</td>
+                </tr>
             </tbody>
         </table>
     </div>
@@ -305,10 +334,82 @@
                 modalEditar.classList.add('activo');
             });
         });
+
+        // Inicializar filtrado por postulantes por defecto al cargar
+        showRequisitos('Postulantes');
+        showEntregas('Postulantes');
     });
 
     function cerrarModalEditar() {
         document.getElementById('modalEditar').classList.remove('activo');
+    }
+
+    function showRequisitos(categoria) {
+        const filas = document.querySelectorAll('.fila-requisito');
+        let count = 0;
+        filas.forEach(fila => {
+            if (fila.dataset.destinado === categoria) {
+                fila.style.display = '';
+                count++;
+            } else {
+                fila.style.display = 'none';
+            }
+        });
+
+        const noRow = document.getElementById('no-requisitos-row');
+        if (noRow) {
+            noRow.style.display = (count === 0) ? '' : 'none';
+        }
+
+        // Toggle active style button
+        const btnPostulantes = document.getElementById('btn-req-postulantes');
+        const btnDocentes = document.getElementById('btn-req-docentes');
+        if (categoria === 'Postulantes') {
+            btnPostulantes.style.background = '#0b2d6b';
+            btnPostulantes.style.color = 'white';
+            btnDocentes.style.background = '#e5e7eb';
+            btnDocentes.style.color = '#333';
+        } else {
+            btnDocentes.style.background = '#0b2d6b';
+            btnDocentes.style.color = 'white';
+            btnPostulantes.style.background = '#e5e7eb';
+            btnPostulantes.style.color = '#333';
+        }
+    }
+
+    function showEntregas(categoria) {
+        const filas = document.querySelectorAll('.fila-entrega');
+        let count = 0;
+        filas.forEach(fila => {
+            if (fila.dataset.destinado === categoria) {
+                fila.style.display = '';
+                count++;
+            } else {
+                fila.style.display = 'none';
+            }
+        });
+
+        const noRow = document.getElementById('no-entregas-row');
+        if (noRow) {
+            noRow.style.display = (count === 0) ? '' : 'none';
+        }
+
+        // Toggle active style button
+        const btnPostulantes = document.getElementById('btn-ent-postulantes');
+        const btnDocentes = document.getElementById('btn-ent-docentes');
+        if (btnPostulantes && btnDocentes) {
+            if (categoria === 'Postulantes') {
+                btnPostulantes.style.background = '#0b2d6b';
+                btnPostulantes.style.color = 'white';
+                btnDocentes.style.background = '#e5e7eb';
+                btnDocentes.style.color = '#333';
+            } else {
+                btnDocentes.style.background = '#0b2d6b';
+                btnDocentes.style.color = 'white';
+                btnPostulantes.style.background = '#e5e7eb';
+                btnPostulantes.style.color = '#333';
+            }
+        }
     }
 </script>
 @endsection

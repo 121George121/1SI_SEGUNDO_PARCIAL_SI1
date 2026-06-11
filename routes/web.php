@@ -3,15 +3,20 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Usuario_Seguridad_y_Auditoria\autenticacionController;
 use App\Http\Controllers\Usuario_Seguridad_y_Auditoria\gestionarUsuariosyRolesController;
+use App\Http\Controllers\Usuario_Seguridad_y_Auditoria\gestionarBitacoraController;
 use App\Http\Controllers\Inscripcion_y_Documentacion\documentosController;
 use App\Http\Controllers\Gestion_Academica\gestionarCarrerasYCuposController;
 use App\Http\Controllers\Logistica_Recursos_y_Reportes\gestionarAulasController;
 use App\Http\Controllers\Gestion_Academica\gestionarGruposController;
+use App\Http\Controllers\Gestion_Academica\gestionarGestionController;
+use App\Http\Controllers\Gestion_Academica\gestionarModalidadController;
 use App\Http\Controllers\Logistica_Recursos_y_Reportes\gestionarDocentesController;
 use App\Http\Controllers\Inscripcion_y_Documentacion\gestionarInscripcionController;
 use App\Http\Controllers\Gestion_Financiera\gestionarPagosController;
 use App\Http\Controllers\Gestion_Academica\gestionarMateriasYHorariosController;
 use App\Http\Controllers\Gestion_Academica\asignarDocentesAGruposYMateriasController;
+use App\Http\Controllers\Gestion_Academica\gestionarEvaluacionesYNotasController;
+
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -22,6 +27,8 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [autenticacionController::class, 'login'])->name('login.post');
     Route::get('/password/forgot', [autenticacionController::class, 'mostrarOlvidoContrasena'])->name('password.forgot');
     Route::post('/password/forgot', [autenticacionController::class, 'enviarCodigoRecuperacion'])->name('password.forgot.send');
+    Route::get('/password/verify', [autenticacionController::class, 'mostrarFormularioVerificarCodigo'])->name('password.verify.form');
+    Route::post('/password/verify', [autenticacionController::class, 'verificarCodigo'])->name('password.verify.submit');
     Route::get('/password/reset', [autenticacionController::class, 'mostrarFormularioCambioContrasena'])->name('password.reset.form');
     Route::post('/password/reset', [autenticacionController::class, 'cambiarContrasena'])->name('password.reset.update');
     Route::post('/password/resend', [autenticacionController::class, 'reenviarCodigoRecuperacion'])->name('password.resend');
@@ -43,6 +50,11 @@ Route::prefix('usuarios')->middleware('auth')->group(function () {
     Route::delete('/{id}', [gestionarUsuariosyRolesController::class, 'destroy'])->name('usuarios.destroy');
     Route::get('/{id}/roles', [gestionarUsuariosyRolesController::class, 'mostrarAsignarRoles'])->name('usuarios.roles');
     Route::post('/{id}/roles', [gestionarUsuariosyRolesController::class, 'assignRoles'])->name('usuarios.roles.update');
+});
+
+Route::prefix('bitacora')->middleware('auth')->group(function () {
+    Route::get('/', [gestionarBitacoraController::class, 'index'])->name('bitacora.index');
+    Route::delete('/{id}', [gestionarBitacoraController::class, 'destroy'])->name('bitacora.destroy');
 });
 
 Route::prefix('documentos')->middleware('auth')->group(function () {
@@ -111,6 +123,20 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('/gestiones', [gestionarGestionController::class, 'index'])->name('gestiones.index');
+    Route::post('/gestiones', [gestionarGestionController::class, 'store'])->name('gestiones.store');
+    Route::put('/gestiones/{id}', [gestionarGestionController::class, 'update'])->name('gestiones.update');
+    Route::delete('/gestiones/{id}', [gestionarGestionController::class, 'destroy'])->name('gestiones.destroy');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('/modalidades', [gestionarModalidadController::class, 'index'])->name('modalidades.index');
+    Route::post('/modalidades', [gestionarModalidadController::class, 'store'])->name('modalidades.store');
+    Route::put('/modalidades/{id}', [gestionarModalidadController::class, 'update'])->name('modalidades.update');
+    Route::delete('/modalidades/{id}', [gestionarModalidadController::class, 'destroy'])->name('modalidades.destroy');
+});
+
+Route::middleware('auth')->group(function () {
     Route::get('/docentes', [gestionarDocentesController::class, 'index'])
         ->name('docentes.index');
     Route::post('/docentes', [gestionarDocentesController::class, 'store'])
@@ -149,16 +175,18 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    Route::get('/pagos', [gestionarPagosController::class, 'index'])
-        ->name('pagos.index');
-    Route::post('/pagos', [gestionarPagosController::class, 'store'])
-        ->name('pagos.store');
-    Route::put('/pagos/{id}', [gestionarPagosController::class, 'update'])
-        ->name('pagos.update');
-    Route::delete('/pagos/{id}', [gestionarPagosController::class, 'destroy'])
-        ->name('pagos.destroy');
-    Route::post('/pagos/inscripcion/guardar', [gestionarPagosController::class, 'guardarPagoInscripcion'])
-        ->name('pagos.inscripcion.guardar');
+    Route::get('/pagos', [gestionarPagosController::class, 'index'])->name('pagos.index');
+    Route::post('/pagos', [gestionarPagosController::class, 'generarPago'])->name('pagos.store');
+    Route::put('/pagos/{id}', [gestionarPagosController::class, 'update'])->name('pagos.update');
+    Route::delete('/pagos/{id}', [gestionarPagosController::class, 'destroy'])->name('pagos.destroy');
+    Route::post('/pagos/inscripcion/guardar', [gestionarPagosController::class, 'guardarPagoInscripcion'])->name('pagos.inscripcion.guardar');
+    Route::post('/pagos/asignar', [gestionarPagosController::class, 'asignarPago'])->name('pagos.asignar');
+
+    // Paypal / Pasarela routes
+    Route::post('/pagos/paypal/pagar/{idPago}/{codigoInscripcion}', [gestionarPagosController::class, 'pagarConPaypal'])->name('pagos.paypal.pagar');
+    Route::get('/paypal/success/{idPago}/{codigoInscripcion}', [gestionarPagosController::class, 'paypalSuccess'])->name('paypal.success');
+    Route::get('/paypal/cancel/{idPago}/{codigoInscripcion}', [gestionarPagosController::class, 'paypalCancel'])->name('paypal.cancel');
+    Route::get('/pagos/comprobante/{idComprobante}', [gestionarPagosController::class, 'emitirComprobante'])->name('emitirComprobante');
 });
 
 Route::middleware('auth')->group(function () {
@@ -203,4 +231,43 @@ Route::middleware('auth')->group(function () {
 
     Route::delete('/asignaciones-docentes/{idGrupo}/{idMateria}', [asignarDocentesAGruposYMateriasController::class, 'destroy'])
         ->name('asignaciones-docentes.destroy');
+});
+
+Route::middleware('auth')->group(function () {
+    Route::get('/evaluaciones-notas', [gestionarEvaluacionesYNotasController::class, 'index'])
+        ->name('evaluaciones-notas.index');
+
+    Route::post('/evaluaciones', [gestionarEvaluacionesYNotasController::class, 'storeEvaluacion'])
+        ->name('evaluaciones.store');
+
+    Route::put('/evaluaciones/{id}', [gestionarEvaluacionesYNotasController::class, 'updateEvaluacion'])
+        ->name('evaluaciones.update');
+
+    Route::delete('/evaluaciones/{id}', [gestionarEvaluacionesYNotasController::class, 'destroyEvaluacion'])
+        ->name('evaluaciones.destroy');
+
+    Route::post('/notas', [gestionarEvaluacionesYNotasController::class, 'storeNota'])
+        ->name('notas.store');
+
+    Route::post('/notas/lote', [gestionarEvaluacionesYNotasController::class, 'guardarNotasLote'])
+        ->name('notas.lote.store');
+
+    Route::put('/notas/{id}', [gestionarEvaluacionesYNotasController::class, 'updateNota'])
+        ->name('notas.update');
+
+    Route::delete('/notas/{id}', [gestionarEvaluacionesYNotasController::class, 'destroyNota'])
+        ->name('notas.destroy');
+});
+
+Route::middleware('auth')->group(function () {
+
+    // Dashboard
+    Route::get('/dashboard', function () {
+        return view('Menu'); // vista principal del dashboard
+    })->name('dashboard');
+
+    // Gestión Financiera
+    Route::get('/gestion-financiera', function () {
+        return redirect()->route('pagos.index');
+    })->name('gestion-financiera.menu');
 });

@@ -308,6 +308,14 @@
                 CU11 - Gestionar Grupos
             </a>
 
+            <a href="{{ route('gestiones.index') }}" class="{{ request()->routeIs('gestiones.*') ? 'activo' : '' }}">
+                Gestionar Gestiones
+            </a>
+
+            <a href="{{ route('modalidades.index') }}" class="{{ request()->routeIs('modalidades.*') ? 'activo' : '' }}">
+                Gestionar Modalidades
+            </a>
+
             <a href="{{ route('materias.index') }}" class="{{ request()->routeIs('materias.*') ? 'activo' : '' }}">
                 CU14 - Gestionar Materias
             </a>
@@ -319,6 +327,11 @@
             <a href="{{ route('asignaciones-docentes.index') }}"
                 class="{{ request()->routeIs('asignaciones-docentes.*') ? 'activo' : '' }}">
                 CU15 - Asignar Docentes a Grupos y Materias
+            </a>
+
+            <a href="{{ route('evaluaciones-notas.index') }}"
+                class="{{ request()->routeIs('evaluaciones-notas.*') || request()->routeIs('evaluaciones.*') || request()->routeIs('notas.*') ? 'activo' : '' }}">
+                CU16 - Gestionar Evaluaciones y Notas
             </a>
         </nav>
 

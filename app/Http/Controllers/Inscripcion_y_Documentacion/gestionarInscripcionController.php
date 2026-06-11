@@ -15,6 +15,7 @@ class gestionarInscripcionController extends Controller
         $inscripciones = DB::table('inscripcion as i')
             ->join('postulante as po', DB::raw('"po"."Id_postulante"'), '=', DB::raw('"i"."Id_postulante"'))
             ->join('persona as p', DB::raw('"p"."Id_persona"'), '=', DB::raw('"po"."Id_postulante"'))
+            ->leftJoin('gestion as g', DB::raw('"g"."Id_gestion"'), '=', DB::raw('"i"."Id_gestion"'))
 
             ->leftJoin('inscripcion_carrera as ic1', function ($join) {
                 $join->on(DB::raw('"ic1"."Codigo_inscripcion"'), '=', DB::raw('"i"."Codigo_inscripcion"'))
@@ -54,9 +55,9 @@ class gestionarInscripcionController extends Controller
                 DB::raw('"ic2"."Id_carrera" as id_carrera_secundaria'),
                 DB::raw('"c2"."nombre_carrera" as carrera_secundaria'),
 
-                DB::raw('NULL as id_gestion'),
-                DB::raw('NULL as anio'),
-                DB::raw('NULL as periodo')
+                DB::raw('"i"."Id_gestion" as id_gestion'),
+                'g.anio',
+                'g.periodo'
             )
             ->orderBy(DB::raw('"i"."Codigo_inscripcion"'), 'desc')
             ->get();
@@ -123,7 +124,8 @@ class gestionarInscripcionController extends Controller
                 'i.fecha_inscripcion',
                 DB::raw('"i"."Id_postulante" as Id_postulante'),
                 DB::raw('"ic1"."Id_carrera" as Id_carrera_principal'),
-                DB::raw('"ic2"."Id_carrera" as Id_carrera_secundaria')
+                DB::raw('"ic2"."Id_carrera" as Id_carrera_secundaria'),
+                DB::raw('"i"."Id_gestion" as Id_gestion')
             )
             ->where('i.Id_postulante', $idPersona)
             ->first();
@@ -164,6 +166,7 @@ class gestionarInscripcionController extends Controller
             'direccion' => 'nullable|string',
             'Id_carrera_principal' => 'required|exists:carrera,Id_carrera',
             'Id_carrera_secundaria' => 'nullable|exists:carrera,Id_carrera|different:Id_carrera_principal',
+            'Id_gestion' => 'required|exists:gestion,Id_gestion',
         ]);
 
         DB::beginTransaction();
@@ -273,6 +276,7 @@ class gestionarInscripcionController extends Controller
                     ->where('Codigo_inscripcion', $codigoInscripcion)
                     ->update([
                         'estado' => 'En_Revision',
+                        'Id_gestion' => $request->input('Id_gestion'),
                     ]);
 
                 DB::table('inscripcion_carrera')
@@ -283,6 +287,7 @@ class gestionarInscripcionController extends Controller
                     'estado' => 'En_Revision',
                     'fecha_inscripcion' => now()->toDateString(),
                     'Id_postulante' => $idPersona,
+                    'Id_gestion' => $request->input('Id_gestion'),
                 ], 'Codigo_inscripcion');
             }
 
@@ -343,6 +348,7 @@ class gestionarInscripcionController extends Controller
             'Id_carrera_principal' => 'required|exists:carrera,Id_carrera',
             'Id_carrera_secundaria' => 'nullable|exists:carrera,Id_carrera|different:Id_carrera_principal',
             'estado' => 'required|string|max:30',
+            'Id_gestion' => 'required|exists:gestion,Id_gestion',
         ]);
 
         DB::beginTransaction();
@@ -377,6 +383,7 @@ class gestionarInscripcionController extends Controller
                 ->where('Codigo_inscripcion', $id)
                 ->update([
                     'estado' => $request->estado,
+                    'Id_gestion' => $request->input('Id_gestion'),
                 ]);
 
             DB::table('inscripcion_carrera')
