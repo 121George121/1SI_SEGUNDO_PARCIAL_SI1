@@ -243,6 +243,7 @@ class gestionarPagosController extends Controller
             'estado_pago_inscripcion' => 'required|in:Pendiente,Liquidado,Rechazado',
             'nro_comprobante' => 'nullable|string|max:50',
             'fecha_emision' => 'nullable|date',
+            'metodo_pago' => 'nullable|string|max:50',
         ]);
 
         DB::beginTransaction();
@@ -299,6 +300,22 @@ class gestionarPagosController extends Controller
                         } catch (\Throwable $e) {
                             // Ignorar fallas de correo
                         }
+
+                        // Notificar mediante el controlador de notificaciones (CU13)
+                        try {
+                            $notificador = new \App\Http\Controllers\Gestion_Academica\enviarNotificacionesController();
+                            $notificador->notificarPagoRealizado(
+                                $pagoActualizado->correo,
+                                $pagoActualizado->nombre . ' ' . $pagoActualizado->apellido,
+                                [
+                                    'concepto' => $pagoActualizado->concepto_pago,
+                                    'monto' => $pagoActualizado->monto,
+                                    'nro_comprobante' => $pagoActualizado->nro_comprobante ?? $nro
+                                ]
+                            );
+                        } catch (\Throwable $e) {
+                            \Illuminate\Support\Facades\Log::error("Fallo al enviar notificación de pago (manual): " . $e->getMessage());
+                        }
                     }
                 }
             }
@@ -310,9 +327,17 @@ class gestionarPagosController extends Controller
                     'estado_pago_inscripcion' => $estado,
                     'fecha_pago' => $estado === 'Liquidado' ? ($request->fecha_emision ?: now()->toDateString()) : null,
                     'Id_comprobante' => $estado === 'Liquidado' ? $idComprobante : null,
-                    'metodo_pago' => $estado === 'Liquidado' ? 'manual' : null,
-                    'referencia_pago' => $estado === 'Liquidado' ? ($request->nro_comprobante ?: 'MANUAL-' . now()->format('YmdHis')) : null,
+                    'metodo_pago' => $estado === 'Liquidado' ? ($request->input('metodo_pago') ?: 'manual') : null,
+                    'referencia_pago' => $estado === 'Liquidado' ? ($request->nro_comprobante ?: strtoupper($request->input('metodo_pago', 'MANUAL')) . '-' . now()->format('YmdHis')) : null,
                 ]);
+
+            // Actualizar estado de inscripción si corresponde (esto también envía la notificación por Gmail)
+            try {
+                $inscripcionController = new \App\Http\Controllers\Inscripcion_y_Documentacion\gestionarInscripcionController();
+                $inscripcionController->actualizarEstadoInscripcionPorDocumentosYPago($codigoInscripcion);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error("Fallo al actualizar estado de inscripción tras pago manual: " . $e->getMessage());
+            }
 
             $this->registrarBitacora('Actualizó el pago de la inscripción ' . $codigoInscripcion . ' a estado ' . $estado);
 
@@ -441,9 +466,33 @@ class gestionarPagosController extends Controller
                 } catch (\Throwable $e) {
                     // Ignorar
                 }
+
+                // Notificar mediante el controlador de notificaciones (CU13)
+                try {
+                    $notificador = new \App\Http\Controllers\Gestion_Academica\enviarNotificacionesController();
+                    $notificador->notificarPagoRealizado(
+                        $pagoActualizado->correo,
+                        $pagoActualizado->nombre . ' ' . $pagoActualizado->apellido,
+                        [
+                            'concepto' => $pagoActualizado->concepto_pago,
+                            'monto' => $pagoActualizado->monto,
+                            'nro_comprobante' => $pagoActualizado->nro_comprobante ?? $nroComprobante
+                        ]
+                    );
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::error("Fallo al enviar notificación de pago (paypal): " . $e->getMessage());
+                }
             }
 
             $this->registrarBitacora('Liquidó pago de inscripción ' . $codigoInscripcion . ' mediante pasarela PayPal');
+
+            // Actualizar estado de inscripción si corresponde (esto también envía la notificación por Gmail)
+            try {
+                $inscripcionController = new \App\Http\Controllers\Inscripcion_y_Documentacion\gestionarInscripcionController();
+                $inscripcionController->actualizarEstadoInscripcionPorDocumentosYPago($codigoInscripcion);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error("Fallo al actualizar estado de inscripción tras pago PayPal: " . $e->getMessage());
+            }
 
             DB::commit();
 

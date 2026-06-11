@@ -125,12 +125,12 @@
                         <form action="{{ route('usuarios.destroy', $usuario->Id_usuario) }}"
                               method="POST"
                               style="display:inline;"
-                              onsubmit="return confirm('¿Desactivar este usuario?');">
+                              onsubmit="return confirm('¿Seguro que deseas eliminar este usuario y todos sus roles asociados?');">
                             @csrf
                             @method('DELETE')
 
                             <button type="submit" class="btn btn-danger">
-                                Desactivar
+                                Eliminar
                             </button>
                         </form>
                     @endif

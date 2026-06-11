@@ -123,6 +123,23 @@ class documentosController extends Controller
 
         $this->registrarBitacora('Validacion de documento presentado ID '.$idDocumento);
 
+        // Notificar al estudiante
+        $persona = DB::table('persona')->where('Id_persona', $idPersona)->first();
+        $documento = DB::table('documento')->where('Id_documento', $idDocumento)->first();
+        if ($persona && !empty($persona->correo) && $documento) {
+            try {
+                $notificador = new \App\Http\Controllers\Gestion_Academica\enviarNotificacionesController();
+                $notificador->enviarNotificacionGeneral(
+                    $persona->correo,
+                    'Documento Validado y Aprobado - CUP FICCT',
+                    "Hola, {$persona->nombre} {$persona->apellido}.\n\nTu documento '{$documento->nombre}' ({$documento->tipo_documento}) ha sido validado y aprobado de forma exitosa en el sistema.",
+                    'documento aprobado o rechazado'
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error("Fallo al enviar notificación de validación de documento: " . $e->getMessage());
+            }
+        }
+
         return redirect()->route('documentos.index')
             ->with('success', 'Documento validado correctamente.');
     }
@@ -144,6 +161,23 @@ class documentosController extends Controller
             ]);
 
         $this->registrarBitacora('Observacion de documento presentado ID '.$idDocumento);
+
+        // Notificar al estudiante
+        $persona = DB::table('persona')->where('Id_persona', $idPersona)->first();
+        $documento = DB::table('documento')->where('Id_documento', $idDocumento)->first();
+        if ($persona && !empty($persona->correo) && $documento) {
+            try {
+                $notificador = new \App\Http\Controllers\Gestion_Academica\enviarNotificacionesController();
+                $notificador->enviarNotificacionGeneral(
+                    $persona->correo,
+                    'Documento Observado / Rechazado - CUP FICCT',
+                    "Hola, {$persona->nombre} {$persona->apellido}.\n\nTu documento '{$documento->nombre}' ({$documento->tipo_documento}) ha sido observado por la administración.\n\nDetalle de la observación: {$request->observacion}\n\nPor favor, ingresa al portal de estudiante y subsana la observación.",
+                    'documento aprobado o rechazado'
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error("Fallo al enviar notificación de observación de documento: " . $e->getMessage());
+            }
+        }
 
         return redirect()->route('documentos.index')
             ->with('success', 'Documento observado correctamente.');

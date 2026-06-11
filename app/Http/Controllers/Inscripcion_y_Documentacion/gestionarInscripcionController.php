@@ -439,29 +439,96 @@ class gestionarInscripcionController extends Controller
                     ->withErrors(['error' => 'La inscripción no existe.']);
             }
 
+            $idPostulante = $inscripcion->Id_postulante;
+
+            // 1. Eliminar asignación de carrera
             DB::table('inscripcion_carrera')
                 ->where('Codigo_inscripcion', $id)
                 ->delete();
 
+            // 2. Eliminar inscripción
             DB::table('inscripcion')
                 ->where('Codigo_inscripcion', $id)
                 ->delete();
 
+            // 3. Eliminar asignación de grupo
+            DB::table('grupo_postulante')
+                ->where('Id_postulante', $idPostulante)
+                ->delete();
+
+            // 4. Eliminar notas asociadas
+            DB::table('nota')
+                ->where('Id_postulante', $idPostulante)
+                ->delete();
+
+            // 5. Eliminar asistencia
+            DB::table('asistencia')
+                ->where('Id_postulante', $idPostulante)
+                ->delete();
+
+            // 6. Eliminar resultado académico
+            DB::table('resultadoacademico')
+                ->where('Id_postulante', $idPostulante)
+                ->delete();
+
+            // 7. Eliminar relación persona_documento
+            DB::table('persona_documento')
+                ->where('Id_persona', $idPostulante)
+                ->delete();
+
+            // 8. Eliminar pagos asociados de la inscripción
+            DB::table('pago_inscripcion')
+                ->where('Codigo_inscripcion', $id)
+                ->delete();
+
+            // 9. Eliminar registro de postulante
+            DB::table('postulante')
+                ->where('Id_postulante', $idPostulante)
+                ->delete();
+
+            // 10. Eliminar usuario asociado
+            DB::table('usuario')
+                ->where('Id_persona', $idPostulante)
+                ->delete();
+
+            // 11. Verificar si la persona tiene otros roles (administrador, docente, etc.)
+            $persona = DB::table('persona')
+                ->where('Id_persona', $idPostulante)
+                ->first();
+
+            if ($persona) {
+                $tieneOtrosRoles = $persona->tipo_Superadministrador || 
+                                   $persona->tipo_Administrador || 
+                                   $persona->tipo_Docente;
+
+                if (!$tieneOtrosRoles) {
+                    // Si no tiene otros roles, eliminar el registro de persona para liberar CI y correo
+                    DB::table('persona')
+                        ->where('Id_persona', $idPostulante)
+                        ->delete();
+                } else {
+                    // Si tiene otros roles, solo desactivar el rol de postulante
+                    DB::table('persona')
+                        ->where('Id_persona', $idPostulante)
+                        ->update(['tipo_Postulante' => false]);
+                }
+            }
+
             $this->registrarBitacora(
                 'Inscripcion',
-                'Eliminó inscripción código ' . $id . '.'
+                'Eliminó la inscripción código ' . $id . ' y liberó los datos de persona y usuario.'
             );
 
             DB::commit();
 
             return redirect()->route('inscripcion.index')
-                ->with('success', 'Inscripción eliminada correctamente.');
+                ->with('success', 'Inscripción y usuario asociados eliminados correctamente. El correo y CI han sido liberados.');
 
         } catch (\Exception $e) {
             DB::rollBack();
 
             return back()->withErrors([
-                'error' => 'Error al eliminar inscripción: ' . $e->getMessage()
+                'error' => 'Error al eliminar la inscripción: ' . $e->getMessage()
             ]);
         }
     }
@@ -570,8 +637,20 @@ class gestionarInscripcionController extends Controller
                 ]);
             }
 
+            $detallesDocumentos = [];
+
             foreach ($request->estado_documento as $idDocumento => $estado) {
                 $observacion = $request->observacion[$idDocumento] ?? null;
+
+                $nombreDoc = DB::table('documento')
+                    ->where('Id_documento', $idDocumento)
+                    ->value('nombre') ?? 'Documento';
+
+                $detallesDocumentos[] = [
+                    'nombre' => $nombreDoc,
+                    'estado' => $estado,
+                    'observacion' => $observacion,
+                ];
 
                 $existe = DB::table('persona_documento')
                     ->where('Id_persona', $idPostulante)
@@ -602,6 +681,24 @@ class gestionarInscripcionController extends Controller
 
             $this->actualizarEstadoInscripcionPorDocumentosYPago($codigo);
 
+            // Enviar correo de notificación sobre revisión de documentos al postulante
+            $postulanteInfo = DB::table('persona')
+                ->where('Id_persona', $idPostulante)
+                ->first();
+
+            if ($postulanteInfo && !empty($postulanteInfo->correo)) {
+                try {
+                    $notificador = new \App\Http\Controllers\Gestion_Academica\enviarNotificacionesController();
+                    $notificador->notificarRevisionDocumentos(
+                        $postulanteInfo->correo,
+                        $postulanteInfo->nombre . ' ' . $postulanteInfo->apellido,
+                        $detallesDocumentos
+                    );
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::error("Fallo al enviar notificación de revisión de documentos: " . $e->getMessage());
+                }
+            }
+
             $this->registrarBitacora(
                 'Inscripcion',
                 'Actualizó documentos de la inscripción código ' . $codigo . '.'
@@ -621,7 +718,7 @@ class gestionarInscripcionController extends Controller
         }
     }
 
-    private function actualizarEstadoInscripcionPorDocumentosYPago($codigoInscripcion)
+    public function actualizarEstadoInscripcionPorDocumentosYPago($codigoInscripcion)
     {
         $inscripcion = DB::table('inscripcion')
             ->where('Codigo_inscripcion', $codigoInscripcion)
@@ -632,6 +729,7 @@ class gestionarInscripcionController extends Controller
         }
 
         $idPostulante = $inscripcion->Id_postulante;
+        $estadoAnterior = $inscripcion->estado;
 
         // 1. Contar documentos destinados a Postulantes
         $totalDocumentos = DB::table('documento')
@@ -677,6 +775,11 @@ class gestionarInscripcionController extends Controller
                 ->update([
                     'estado_inscripcion' => 'Inscrito',
                 ]);
+
+            // Enviar notificación si pasa a estado Inscrito
+            if ($estadoAnterior !== 'Inscrito') {
+                $this->enviarNotificacionExitoInscripcion($codigoInscripcion);
+            }
         } else {
             DB::table('inscripcion')
                 ->where('Codigo_inscripcion', $codigoInscripcion)
@@ -721,6 +824,36 @@ class gestionarInscripcionController extends Controller
         }
 
         return $idPersona;
+    }
+
+    private function enviarNotificacionExitoInscripcion($codigoInscripcion)
+    {
+        try {
+            $inscripcion = DB::table('inscripcion as i')
+                ->join('persona as p', 'p.Id_persona', '=', 'i.Id_postulante')
+                ->select('p.correo', 'p.nombre', 'p.apellido')
+                ->where('i.Codigo_inscripcion', $codigoInscripcion)
+                ->first();
+
+            if ($inscripcion && !empty($inscripcion->correo)) {
+                $correo = $inscripcion->correo;
+                $nombreCompleto = $inscripcion->nombre . ' ' . $inscripcion->apellido;
+
+                $titulo = 'Inscripción Confirmada - CUP FICCT';
+                $mensaje = "Hola, {$nombreCompleto}.\n\nTe informamos que tu inscripción ha sido procesada de manera exitosa.\n\nDetalles:\n- Tus documentos han sido validados y son válidos.\n- Tu pago se ha efectuado correctamente.\n\n¡Bienvenido al sistema académico!";
+
+                $notificador = new \App\Http\Controllers\Gestion_Academica\enviarNotificacionesController();
+                $notificador->enviarNotificacion(
+                    $correo,
+                    $titulo,
+                    $mensaje,
+                    'inscripción confirmada',
+                    $nombreCompleto
+                );
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error("Fallo al enviar notificación de éxito de inscripción: " . $e->getMessage());
+        }
     }
 
 

@@ -506,6 +506,19 @@
                                         </button>
                                     </form>
 
+                                    <!-- Botón Efectivo -->
+                                    <form action="{{ route('pagos.inscripcion.guardar') }}" method="POST" style="margin:0;" onsubmit="return confirm('¿Confirmar pago en efectivo?');">
+                                        @csrf
+                                        <input type="hidden" name="Id_pago" value="{{ $item->id_pago }}">
+                                        <input type="hidden" name="Codigo_inscripcion" value="{{ $item->codigo_inscripcion }}">
+                                        <input type="hidden" name="estado_pago_inscripcion" value="Liquidado">
+                                        <input type="hidden" name="metodo_pago" value="efectivo">
+                                        <input type="hidden" name="fecha_emision" value="{{ date('Y-m-d') }}">
+                                        <button type="submit" class="btn-success" style="background:#16a34a; padding: 6px 12px; border-radius: 6px;">
+                                            Efectivo
+                                        </button>
+                                    </form>
+
                                     <!-- Procesamiento Manual -->
                                     <details style="position: relative;">
                                         <summary class="btn-success" style="list-style: none; padding: 6px 12px; border-radius: 6px; text-align: center;">Manual</summary>

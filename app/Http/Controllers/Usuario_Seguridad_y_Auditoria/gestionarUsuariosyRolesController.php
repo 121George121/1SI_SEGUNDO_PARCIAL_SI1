@@ -161,24 +161,33 @@ class gestionarUsuariosyRolesController extends Controller
         $usuario = gestionarUsuariosyRoles::with('persona')->findOrFail($id);
 
         if ((int) auth()->id() === (int) $usuario->Id_usuario) {
-            return back()->withErrors(['general' => 'No puedes desactivar tu propio usuario.']);
+            return back()->withErrors(['general' => 'No puedes eliminar tu propio usuario.']);
         }
 
-        $usuario->update(['estado' => 'inactivo']);
-        $usuario->persona?->update(['estado' => 'inactivo']);
+        DB::beginTransaction();
+        try {
+            $nombreUsuario = $usuario->nombre_usuario;
+            $personaId = $usuario->Id_persona;
 
-        if ($usuario->Id_persona) {
-            DB::table('administrador')
-                ->where('Id_administrador', $usuario->Id_persona)
-                ->update([
-                    'estado' => 'inactivo',
-                ]);
+            // Delete user record first
+            $usuario->delete();
+
+            // Delete associated persona (cascades to superadmin, admin, docente, postulante, etc.)
+            if ($personaId) {
+                DB::table('persona')->where('Id_persona', $personaId)->delete();
+            }
+
+            $this->registrarBitacora('Usuario y persona eliminados: ' . $nombreUsuario);
+
+            DB::commit();
+
+            return redirect()->route('usuarios.index')
+                ->with('success', 'Usuario y sus roles asociados eliminados correctamente.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->route('usuarios.index')
+                ->withErrors(['general' => 'No se pudo eliminar el usuario: ' . $e->getMessage()]);
         }
-
-        $this->registrarBitacora('Usuario desactivado: '.$usuario->nombre_usuario);
-
-        return redirect()->route('usuarios.index')
-            ->with('success', 'Usuario desactivado correctamente.');
     }
 
     public function mostrarAsignarRoles(int $id): View
