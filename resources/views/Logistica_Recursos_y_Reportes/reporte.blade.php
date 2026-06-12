@@ -159,6 +159,53 @@
             text-align: center;
         }
     }
+
+    /* Estilos Premium para Generar Reporte por Voz */
+    .btn-audio {
+        background: linear-gradient(135deg, #4f46e5, #06b6d4);
+        color: white;
+        border: none;
+        padding: 11px 18px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+    }
+    .btn-audio:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(79, 70, 229, 0.4);
+    }
+    .btn-audio.recording {
+        background: linear-gradient(135deg, #ef4444, #f43f5e);
+        animation: pulse-red 1.5s infinite;
+        box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+    }
+    @keyframes pulse-red {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+    .audio-pulse-ring {
+        animation: pulse-ring 1.2s cubic-bezier(0.215, 0.610, 0.355, 1) infinite;
+    }
+    @keyframes pulse-ring {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(22, 163, 74, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+    }
+    .field-highlight {
+        animation: highlight-pulse 1.5s ease-out;
+    }
+    @keyframes highlight-pulse {
+        0% { background-color: #fef08a; border-color: #eab308; }
+        100% { background-color: #f9fafb; border-color: #ccc; }
+    }
 </style>
 
 @if($errors->any())
@@ -168,7 +215,7 @@
 <div class="card-box">
     <h2 style="color:#0b2d6b; margin-bottom:16px;">Filtros de Reporte</h2>
 
-    <form method="POST" action="{{ route('reportes.generar') }}">
+    <form method="POST" action="{{ route('reportes.generar') }}" id="form-reportes">
         @csrf
         
         <div class="form-grid">
@@ -231,9 +278,19 @@
             </div>
         </div>
 
+        <div id="audio-status-container" style="display: none; margin-top: 16px; padding: 12px 16px; border-radius: 8px; background: #f0fdf4; border: 1px solid #bbf7d0; align-items: center; gap: 12px; transition: all 0.3s ease;">
+            <div class="audio-pulse-ring" style="width: 10px; height: 10px; border-radius: 50%; background: #16a34a;"></div>
+            <span id="audio-status-text" style="font-size: 14px; color: #166534; font-weight: bold;">Escuchando...</span>
+            <span id="audio-transcript" style="font-size: 14px; color: #1e293b; font-style: italic; margin-left: 10px;"></span>
+        </div>
+
         <div style="margin-top: 24px;" class="btn-container">
             <button type="submit" formaction="{{ route('reportes.generar') }}" class="btn-primary">
                 Generar Reporte
+            </button>
+            <button type="button" id="btn-audio-report" class="btn-audio" title="Generar por voz">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                <span>Generar por Voz</span>
             </button>
             @if(isset($resultados) && $resultados->isNotEmpty())
                 <button type="submit" formaction="{{ route('reportes.exportar', ['format' => 'pdf']) }}" class="btn-success">
@@ -264,6 +321,8 @@
         ];
         $nombreActual = $nombresReporte[$tipo_reporte ?? 'general'] ?? 'Reporte';
     @endphp
+
+    <div id="audio-report-feedback" data-report-name="{{ $nombreActual }}" data-count="{{ $resultados->count() }}" style="display:none;"></div>
 
     <div class="card-box">
         <h2 style="color:#0b2d6b; margin-bottom:16px;">Resultados: {{ $nombreActual }}</h2>
@@ -405,8 +464,11 @@
                             <th>Docente</th>
                             <th>CI</th>
                             <th style="text-align: center;">Años de Servicio</th>
-                            <th>Grupo Asignado</th>
+                            <th>Carrera(s)</th>
                             <th>Materia Asignada</th>
+                            <th>Grupo Asignado</th>
+                            <th>Horario Clase</th>
+                            <th>Gestión</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -416,8 +478,11 @@
                                 <td style="font-weight: bold; color: #0b2d6b;">{{ $item->nombre_docente }}</td>
                                 <td>{{ $item->ci }}</td>
                                 <td style="text-align: center;">{{ $item->anio_servicio ?? '0' }}</td>
-                                <td>{{ $item->sigla_grupo }}</td>
-                                <td>{{ $item->nombre_materia }}</td>
+                                <td>{{ $item->nombre_carreras ?? 'Sin carrera / asignación' }}</td>
+                                <td>{{ $item->nombre_materia ?? 'Sin materia asignada' }}</td>
+                                <td>{{ $item->sigla_grupo ?? 'Sin grupo' }}</td>
+                                <td>{{ $item->horario_clase ?? 'Sin horario' }}</td>
+                                <td>{{ $item->anio_gestion ? ($item->anio_gestion . ' - ' . $item->periodo_gestion) : 'N/A' }}</td>
                             </tr>
                         @endforeach
                     </tbody>
@@ -450,5 +515,200 @@
         </div>
     </div>
 @endif
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const btnAudio = document.getElementById('btn-audio-report');
+        const statusContainer = document.getElementById('audio-status-container');
+        const statusText = document.getElementById('audio-status-text');
+        const transcriptText = document.getElementById('audio-transcript');
+        
+        // 1. Text-to-Speech synthesis helper
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'es-ES';
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // 2. Play feedback on load if a report was generated
+        const feedbackEl = document.getElementById('audio-report-feedback');
+        if (feedbackEl) {
+            const reportName = feedbackEl.getAttribute('data-report-name');
+            const count = feedbackEl.getAttribute('data-count');
+            setTimeout(() => {
+                speak(`Reporte de ${reportName} generado con éxito. Se encontraron ${count} registros.`);
+            }, 500);
+        }
+
+        // 3. Audio Recognition logic
+        if (btnAudio) {
+            btnAudio.addEventListener('click', () => {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) {
+                    alert('Tu navegador no soporta el reconocimiento de voz. Te recomendamos usar Google Chrome o Microsoft Edge.');
+                    return;
+                }
+
+                // Check if already recording
+                if (btnAudio.classList.contains('recording')) {
+                    return; // Avoid double initialization
+                }
+
+                const recognition = new SpeechRecognition();
+                recognition.lang = 'es-ES';
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+
+                recognition.onstart = () => {
+                    btnAudio.classList.add('recording');
+                    statusContainer.style.display = 'flex';
+                    statusText.textContent = 'Escuchando...';
+                    statusText.style.color = '#166534';
+                    statusContainer.style.backgroundColor = '#f0fdf4';
+                    statusContainer.style.borderColor = '#bbf7d0';
+                    transcriptText.textContent = 'Habla ahora (ej. "dame aprobados de Sistemas")...';
+                };
+
+                recognition.onerror = (event) => {
+                    console.error('Error de reconocimiento:', event.error);
+                    btnAudio.classList.remove('recording');
+                    statusText.textContent = 'Error: ' + event.error;
+                    statusText.style.color = '#991b1b';
+                    statusContainer.style.backgroundColor = '#fee2e2';
+                    statusContainer.style.borderColor = '#fecaca';
+                    speak('Hubo un error con el micrófono. Inténtalo de nuevo.');
+                    setTimeout(() => {
+                        statusContainer.style.display = 'none';
+                    }, 4000);
+                };
+
+                recognition.onend = () => {
+                    btnAudio.classList.remove('recording');
+                };
+
+                recognition.onresult = (event) => {
+                    const speechToText = event.results[0][0].transcript;
+                    transcriptText.textContent = `"${speechToText}"`;
+                    statusText.textContent = 'Procesando con IA...';
+                    statusText.style.color = '#1e3a8a';
+                    statusContainer.style.backgroundColor = '#eff6ff';
+                    statusContainer.style.borderColor = '#bfdbfe';
+
+                    // Get CSRF Token
+                    const csrfToken = document.querySelector('input[name="_token"]')?.value;
+
+                    // Send to backend route
+                    fetch('{{ route("reportes.parsearAudio") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken
+                        },
+                        body: JSON.stringify({ texto: speechToText })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success && data.filters) {
+                            statusText.textContent = '¡Filtros aplicados!';
+                            statusText.style.color = '#166534';
+                            statusContainer.style.backgroundColor = '#f0fdf4';
+                            statusContainer.style.borderColor = '#bbf7d0';
+
+                            const filters = data.filters;
+                            const fieldsToHighlight = [];
+
+                            function highlightField(element) {
+                                if (!element) return;
+                                element.classList.add('field-highlight');
+                                setTimeout(() => {
+                                    element.classList.remove('field-highlight');
+                                }, 1500);
+                            }
+
+                            // Fill fields and highlight
+                            if (filters.tipo_reporte) {
+                                const el = document.getElementById('tipo_reporte');
+                                if (el) {
+                                    el.value = filters.tipo_reporte;
+                                    fieldsToHighlight.push(el);
+                                }
+                            }
+
+                            if (filters.Id_gestion !== undefined) {
+                                const el = document.getElementById('Id_gestion');
+                                if (el) {
+                                    el.value = filters.Id_gestion || "";
+                                    fieldsToHighlight.push(el);
+                                }
+                            }
+
+                            if (filters.Id_carrera !== undefined) {
+                                const el = document.getElementById('Id_carrera');
+                                if (el) {
+                                    el.value = filters.Id_carrera || "";
+                                    fieldsToHighlight.push(el);
+                                }
+                            }
+
+                            if (filters.Id_grupo !== undefined) {
+                                const el = document.getElementById('Id_grupo');
+                                if (el) {
+                                    el.value = filters.Id_grupo || "";
+                                    fieldsToHighlight.push(el);
+                                }
+                            }
+
+                            if (filters.meritos !== undefined) {
+                                const el = document.getElementById('meritos');
+                                if (el) {
+                                    el.value = filters.meritos;
+                                    fieldsToHighlight.push(el);
+                                }
+                            }
+
+                            fieldsToHighlight.forEach(highlightField);
+
+                            // Get report name for TTS
+                            let reportName = "reporte";
+                            const selectReport = document.getElementById('tipo_reporte');
+                            if (selectReport) {
+                                reportName = selectReport.options[selectReport.selectedIndex].text;
+                            }
+                            speak(`Generando ${reportName}...`);
+
+                            // Submit form after animation delay
+                            setTimeout(() => {
+                                document.getElementById('form-reportes').submit();
+                            }, 1200);
+                        } else {
+                            throw new Error('Response format invalid');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error al procesar el audio:', error);
+                        statusText.textContent = 'Error al procesar';
+                        statusText.style.color = '#991b1b';
+                        statusContainer.style.backgroundColor = '#fee2e2';
+                        statusContainer.style.borderColor = '#fecaca';
+                        speak('No pude entender el comando. Por favor, intenta de nuevo.');
+                        setTimeout(() => {
+                            statusContainer.style.display = 'none';
+                        }, 4000);
+                    });
+                };
+
+                recognition.start();
+            });
+        }
+    });
+</script>
 
 @endsection

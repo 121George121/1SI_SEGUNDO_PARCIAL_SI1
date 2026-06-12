@@ -339,6 +339,10 @@
                 class="{{ request()->routeIs('evaluaciones-notas.*') || request()->routeIs('evaluaciones.*') || request()->routeIs('notas.*') ? 'activo' : '' }}">
                 CU16 - Gestionar Evaluaciones y Notas
             </a>
+
+            <a href="{{ route('admision.index') }}" class="{{ request()->routeIs('admision.*') ? 'activo' : '' }}">
+                CU17 - Gestionar Admisión Final
+            </a>
         </nav>
 
         <div class="logout">

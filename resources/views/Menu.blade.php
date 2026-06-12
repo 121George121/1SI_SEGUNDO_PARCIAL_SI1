@@ -124,7 +124,7 @@ main p { font-size:18px; color:#333; margin-bottom:24px; }
 </aside>
 
 <main>
-    <h1>Bienvenido  {{ Auth::user()->nombre_usuario }}</h1>
+    <h1>Bienvenido {{ Auth::user()->persona ? Auth::user()->persona->nombre . ' ' . Auth::user()->persona->apellido : Auth::user()->nombre_usuario }}</h1>
     <p>Sistema de Inscripción al CUP Preuniversitario</p>
 
     <!-- Cards de estadísticas -->

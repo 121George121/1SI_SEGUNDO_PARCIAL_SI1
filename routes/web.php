@@ -18,6 +18,7 @@ use App\Http\Controllers\Gestion_Academica\gestionarMateriasYHorariosController;
 use App\Http\Controllers\Gestion_Academica\asignarDocentesAGruposYMateriasController;
 use App\Http\Controllers\Gestion_Academica\gestionarEvaluacionesYNotasController;
 use App\Http\Controllers\Gestion_Academica\gestionarPostulantesAGruposController;
+use App\Http\Controllers\Gestion_Academica\gestionarAdmisionFinalController;
 
 
 Route::get('/', function () {
@@ -83,6 +84,11 @@ Route::middleware('auth')->group(function () {
         ->name('carreras-cupos.habilitar');
     Route::delete('/carreras-cupos/{id}', [gestionarCarrerasYCuposController::class, 'destroy'])
     ->name('carreras-cupos.destroy');
+
+    // CU17 - Gestionar Admisión Final
+    Route::get('/admision-final', [gestionarAdmisionFinalController::class, 'index'])->name('admision.index');
+    Route::post('/admision-final/consolidar', [gestionarAdmisionFinalController::class, 'consolidar'])->name('admision.consolidar');
+    Route::post('/admision-final/notificar', [gestionarAdmisionFinalController::class, 'notificar'])->name('admision.notificar');
 });
 
 Route::middleware('auth')->group(function () {
@@ -162,6 +168,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/reportes', [reporteController::class, 'index'])->name('reportes.index');
     Route::post('/reportes/generar', [reporteController::class, 'generar'])->name('reportes.generar');
     Route::post('/reportes/exportar', [reporteController::class, 'exportar'])->name('reportes.exportar');
+    Route::post('/reportes/parsear-audio', [reporteController::class, 'parsearAudio'])->name('reportes.parsearAudio');
 });
 
 Route::middleware('auth')->group(function () {

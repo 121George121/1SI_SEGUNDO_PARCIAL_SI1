@@ -132,8 +132,11 @@
                     <th>Docente</th>
                     <th>CI</th>
                     <th>Años de Servicio</th>
-                    <th>Grupo</th>
-                    <th>Materia</th>
+                    <th>Carrera(s)</th>
+                    <th>Materia Asignada</th>
+                    <th>Grupo Asignado</th>
+                    <th>Horario Clase</th>
+                    <th>Gestión</th>
                 </tr>
             </thead>
             <tbody>
@@ -143,8 +146,11 @@
                         <td class="font-bold">{{ $item->nombre_docente }}</td>
                         <td>{{ $item->ci }}</td>
                         <td class="text-center">{{ $item->anio_servicio ?? '0' }}</td>
-                        <td>{{ $item->sigla_grupo }}</td>
-                        <td>{{ $item->nombre_materia }}</td>
+                        <td>{{ $item->nombre_carreras ?? 'Sin carrera / asignación' }}</td>
+                        <td>{{ $item->nombre_materia ?? 'Sin materia asignada' }}</td>
+                        <td>{{ $item->sigla_grupo ?? 'Sin grupo' }}</td>
+                        <td>{{ $item->horario_clase ?? 'Sin horario' }}</td>
+                        <td>{{ $item->anio_gestion ? ($item->anio_gestion . ' - ' . $item->periodo_gestion) : 'N/A' }}</td>
                     </tr>
                 @endforeach
             </tbody>

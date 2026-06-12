@@ -209,12 +209,15 @@
         @elseif($tipo_reporte === 'docentes')
             <thead>
                 <tr>
-                    <th style="width: 40px;" class="text-center">#</th>
+                    <th style="width: 30px;" class="text-center">#</th>
                     <th>Docente</th>
                     <th>CI</th>
-                    <th class="text-center">Servicio (Años)</th>
-                    <th>Grupo</th>
+                    <th class="text-center">Años Serv.</th>
+                    <th>Carrera(s)</th>
                     <th>Materia</th>
+                    <th>Grupo</th>
+                    <th>Horario</th>
+                    <th>Gestión</th>
                 </tr>
             </thead>
             <tbody>
@@ -224,8 +227,11 @@
                         <td class="font-bold">{{ $item->nombre_docente }}</td>
                         <td>{{ $item->ci }}</td>
                         <td class="text-center">{{ $item->anio_servicio ?? '0' }}</td>
-                        <td>{{ $item->sigla_grupo }}</td>
-                        <td>{{ $item->nombre_materia }}</td>
+                        <td>{{ $item->nombre_carreras ?? 'Sin carrera / asignación' }}</td>
+                        <td>{{ $item->nombre_materia ?? 'Sin materia asignada' }}</td>
+                        <td>{{ $item->sigla_grupo ?? 'Sin grupo' }}</td>
+                        <td>{{ $item->horario_clase ?? 'Sin horario' }}</td>
+                        <td>{{ $item->anio_gestion ? ($item->anio_gestion . ' - ' . $item->periodo_gestion) : 'N/A' }}</td>
                     </tr>
                 @endforeach
             </tbody>
