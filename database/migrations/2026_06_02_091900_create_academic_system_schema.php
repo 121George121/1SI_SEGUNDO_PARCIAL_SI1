@@ -88,10 +88,11 @@ return new class extends Migration
         });
 
         Schema::create('comprobante', function (Blueprint $table) {
-            $table->increments('Id_comprobante');
-            $table->string('nro_comprobante', 50);
-            $table->date('fecha_emision');
-        });
+    $table->increments('Id_comprobante');
+    $table->string('nro_comprobante', 50);
+    $table->date('fecha_emision');
+    $table->string('archivo', 255)->nullable(); // <--- Aquí está el nuevo atributo
+});
 
         Schema::create('superadministrador', function (Blueprint $table) {
             $table->unsignedInteger('Id_superadministrador')->primary();
@@ -311,6 +312,7 @@ return new class extends Migration
                 ->onUpdate('cascade')
                 ->onDelete('set null');
         });
+
 
         Schema::create('cupocarrera', function (Blueprint $table) {
             $table->increments('Id_cupo');

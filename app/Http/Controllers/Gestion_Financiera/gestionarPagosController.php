@@ -16,22 +16,24 @@ class gestionarPagosController extends Controller
 {
     public function index()
     {
+        // Obtener conceptos globales de pago (guardados en la tabla 'pago')
         $pagos = DB::table('pago')
             ->select(
-                DB::raw('"Id_pago" as id_pago'),
+                'Id_pago as id_pago',
                 'concepto_pago',
                 'monto',
                 'estado_pago',
                 'observaciones'
             )
-            ->orderBy(DB::raw('"Id_pago"'), 'desc')
+            ->orderBy('Id_pago', 'desc')
             ->get();
 
+        // Obtener inscripciones de postulantes activas
         $inscripciones = DB::table('inscripcion as i')
-            ->join('postulante as po', DB::raw('"po"."Id_postulante"'), '=', DB::raw('"i"."Id_postulante"'))
-            ->join('persona as p', DB::raw('"p"."Id_persona"'), '=', DB::raw('"po"."Id_postulante"'))
+            ->join('postulante as po', 'po.Id_postulante', '=', 'i.Id_postulante')
+            ->join('persona as p', 'p.Id_persona', '=', 'po.Id_postulante')
             ->select(
-                DB::raw('"i"."Codigo_inscripcion" as codigo_inscripcion'),
+                'i.Codigo_inscripcion as codigo_inscripcion',
                 'p.ci',
                 'p.nombre',
                 'p.apellido',
@@ -39,33 +41,30 @@ class gestionarPagosController extends Controller
                 'p.telefono',
                 'p.direccion'
             )
-            ->orderBy(DB::raw('"i"."Codigo_inscripcion"'), 'desc')
+            ->orderBy('i.Codigo_inscripcion', 'desc')
             ->get();
 
+        // Obtener la asignación de pagos por inscripción (de la tabla intermedia 'pago_inscripcion')
         $pagosInscripcion = DB::table('pago_inscripcion as pi')
-            ->join('pago as pa', DB::raw('"pa"."Id_pago"'), '=', DB::raw('"pi"."Id_pago"'))
-            ->join('inscripcion as i', DB::raw('"i"."Codigo_inscripcion"'), '=', DB::raw('"pi"."Codigo_inscripcion"'))
-            ->join('postulante as po', DB::raw('"po"."Id_postulante"'), '=', DB::raw('"i"."Id_postulante"'))
-            ->join('persona as p', DB::raw('"p"."Id_persona"'), '=', DB::raw('"po"."Id_postulante"'))
-            ->leftJoin('comprobante as c', DB::raw('"c"."Id_comprobante"'), '=', DB::raw('"pi"."Id_comprobante"'))
+            ->join('pago as pa', 'pa.Id_pago', '=', 'pi.Id_pago')
+            ->join('inscripcion as i', 'i.Codigo_inscripcion', '=', 'pi.Codigo_inscripcion')
+            ->join('postulante as po', 'po.Id_postulante', '=', 'i.Id_postulante')
+            ->join('persona as p', 'p.Id_persona', '=', 'po.Id_postulante')
+            ->leftJoin('comprobante as c', 'c.Id_comprobante', '=', 'pi.Id_comprobante')
             ->leftJoin('inscripcion_carrera as ic', function ($join) {
-                $join->on(DB::raw('"ic"."Codigo_inscripcion"'), '=', DB::raw('"i"."Codigo_inscripcion"'))
+                $join->on('ic.Codigo_inscripcion', '=', 'i.Codigo_inscripcion')
                      ->where('ic.prioridad', '=', 1);
             })
-            ->leftJoin('carrera as ca', DB::raw('"ca"."Id_carrera"'), '=', DB::raw('"ic"."Id_carrera"'))
+            ->leftJoin('carrera as ca', 'ca.Id_carrera', '=', 'ic.Id_carrera')
             ->select(
-                DB::raw('"pi"."Id_pago" as id_pago'),
-                DB::raw('"pi"."Codigo_inscripcion" as codigo_inscripcion'),
-                'pi.estado_pago_inscripcion',
+                'pi.Id_pago as id_pago',
+                'pi.Codigo_inscripcion as codigo_inscripcion',
+                'pi.estado_pago_inscripcion', 
                 'pi.fecha_pago',
-                'pi.metodo_pago',
-                'pi.referencia_pago',
-                DB::raw('"pi"."Id_comprobante" as id_comprobante'),
-
+                'pi.Id_comprobante as id_comprobante',
                 'pa.concepto_pago',
                 'pa.monto',
                 'pa.observaciones',
-
                 'p.ci',
                 'p.nombre',
                 'p.apellido',
@@ -74,12 +73,11 @@ class gestionarPagosController extends Controller
                 'p.direccion',
                 'i.estado as estado_inscripcion',
                 'ca.nombre_carrera as carrera_principal',
-
                 'c.nro_comprobante',
                 'c.fecha_emision',
-                'c.archivo'
+                DB::raw('NULL as archivo')
             )
-            ->orderBy(DB::raw('"pi"."Codigo_inscripcion"'), 'desc')
+            ->orderBy('pi.Codigo_inscripcion', 'desc')
             ->get();
 
         $conceptos = $pagos;
@@ -95,7 +93,7 @@ class gestionarPagosController extends Controller
     public function generarPago(Request $request)
     {
         $request->validate([
-            'concepto_pago' => 'required|string|max:50',
+            'concepto_pago' => 'required|string|max:100',
             'monto' => 'required|numeric|min:0.01',
             'estado_pago' => 'required|in:activo,inactivo',
             'observaciones' => 'nullable|string',
@@ -117,7 +115,7 @@ class gestionarPagosController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'concepto_pago' => 'required|string|max:50',
+            'concepto_pago' => 'required|string|max:100',
             'monto' => 'required|numeric|min:0.01',
             'estado_pago' => 'required|in:activo,inactivo',
             'observaciones' => 'nullable|string',
@@ -170,7 +168,9 @@ class gestionarPagosController extends Controller
             'Codigo_inscripcion' => 'nullable|exists:inscripcion,Codigo_inscripcion',
         ]);
 
-        $idPago = $request->Id_pago;
+        $idPagoTemplate = $request->Id_pago;
+        
+        $template = DB::table('pago')->where('Id_pago', $idPagoTemplate)->first();
 
         if ($request->has('asignar_todos') && $request->asignar_todos == '1') {
             $inscripciones = DB::table('inscripcion')->select('Codigo_inscripcion')->get();
@@ -178,25 +178,23 @@ class gestionarPagosController extends Controller
 
             foreach ($inscripciones as $ins) {
                 $existe = DB::table('pago_inscripcion')
-                    ->where('Id_pago', $idPago)
                     ->where('Codigo_inscripcion', $ins->Codigo_inscripcion)
+                    ->where('Id_pago', $idPagoTemplate)
                     ->exists();
 
                 if (!$existe) {
                     DB::table('pago_inscripcion')->insert([
-                        'Id_pago' => $idPago,
+                        'Id_pago' => $idPagoTemplate,
                         'Codigo_inscripcion' => $ins->Codigo_inscripcion,
                         'estado_pago_inscripcion' => 'Pendiente',
                         'fecha_pago' => null,
                         'Id_comprobante' => null,
-                        'metodo_pago' => null,
-                        'referencia_pago' => null,
                     ]);
                     $creados++;
                 }
             }
 
-            $this->registrarBitacora('Asignó pago ID ' . $idPago . ' a todos los postulantes (' . $creados . ' asignados).');
+            $this->registrarBitacora('Asignó concepto "' . $template->concepto_pago . '" a todos los postulantes (' . $creados . ' asignados).');
 
             return redirect()->route('pagos.index')
                 ->with('success', 'Concepto de pago asignado correctamente a ' . $creados . ' postulantes.');
@@ -208,27 +206,25 @@ class gestionarPagosController extends Controller
             $codigoInscripcion = $request->Codigo_inscripcion;
 
             $existe = DB::table('pago_inscripcion')
-                ->where('Id_pago', $idPago)
                 ->where('Codigo_inscripcion', $codigoInscripcion)
+                ->where('Id_pago', $idPagoTemplate)
                 ->exists();
 
             if ($existe) {
                 return back()->withErrors([
-                    'error' => 'Ese pago ya fue asignado a esa inscripción.'
+                    'error' => 'Ese concepto de pago ya fue asignado a esta inscripción.'
                 ])->withInput();
             }
 
             DB::table('pago_inscripcion')->insert([
-                'Id_pago' => $idPago,
+                'Id_pago' => $idPagoTemplate,
                 'Codigo_inscripcion' => $codigoInscripcion,
                 'estado_pago_inscripcion' => 'Pendiente',
                 'fecha_pago' => null,
                 'Id_comprobante' => null,
-                'metodo_pago' => null,
-                'referencia_pago' => null,
             ]);
 
-            $this->registrarBitacora('Asignó pago a inscripción ' . $codigoInscripcion);
+            $this->registrarBitacora('Asignó pago ID ' . $idPagoTemplate . ' a inscripción ' . $codigoInscripcion);
 
             return redirect()->route('pagos.index')
                 ->with('success', 'Pago asignado correctamente.');
@@ -238,12 +234,11 @@ class gestionarPagosController extends Controller
     public function guardarPagoInscripcion(Request $request)
     {
         $request->validate([
-            'Id_pago' => 'required|integer',
+            'Id_pago' => 'required|integer', 
             'Codigo_inscripcion' => 'required|integer',
             'estado_pago_inscripcion' => 'required|in:Pendiente,Liquidado,Rechazado',
             'nro_comprobante' => 'nullable|string|max:50',
             'fecha_emision' => 'nullable|date',
-            'metodo_pago' => 'nullable|string|max:50',
         ]);
 
         DB::beginTransaction();
@@ -263,7 +258,7 @@ class gestionarPagosController extends Controller
 
             if ($estado === 'Liquidado') {
                 if (!$idComprobante) {
-                    $nro = $request->nro_comprobante ?: 'COMP-' . now()->format('YmdHis') . '-' . $idPago . '-' . $codigoInscripcion;
+                    $nro = $request->nro_comprobante ?: 'COMP-' . now()->format('YmdHis') . '-' . $idPago;
                     $fecha = $request->fecha_emision ?: now()->toDateString();
                     $archivo = $nro . '.pdf';
 
@@ -273,35 +268,24 @@ class gestionarPagosController extends Controller
                         'archivo' => $archivo,
                     ], 'Id_comprobante');
 
-                    // Generar PDF y guardar
                     Storage::disk('local')->makeDirectory('comprobantes');
 
                     DB::table('pago_inscripcion')
                         ->where('Id_pago', $idPago)
                         ->where('Codigo_inscripcion', $codigoInscripcion)
-                        ->update([
-                            'Id_comprobante' => $idComprobante,
-                        ]);
+                        ->update(['Id_comprobante' => $idComprobante]);
 
                     $pagoActualizado = $this->buscarPagoInscripcion($idPago, $codigoInscripcion);
 
-                    $pdf = Pdf::loadView('Gestion_Financiera.comprobantePdf', [
-                        'pago' => $pagoActualizado,
-                    ]);
-
+                    $pdf = Pdf::loadView('Gestion_Financiera.comprobantePdf', ['pago' => $pagoActualizado]);
                     Storage::disk('local')->put('comprobantes/' . $archivo, $pdf->output());
-
                     $pdfPath = storage_path('app/comprobantes/' . $archivo);
 
                     if (!empty($pagoActualizado->correo)) {
                         try {
-                            Mail::to($pagoActualizado->correo)
-                                ->send(new ComprobantePagoMail($pagoActualizado, $pdfPath));
-                        } catch (\Throwable $e) {
-                            // Ignorar fallas de correo
-                        }
+                            Mail::to($pagoActualizado->correo)->send(new ComprobantePagoMail($pagoActualizado, $pdfPath));
+                        } catch (\Throwable $e) {}
 
-                        // Notificar mediante el controlador de notificaciones (CU13)
                         try {
                             $notificador = new \App\Http\Controllers\Gestion_Academica\enviarNotificacionesController();
                             $notificador->notificarPagoRealizado(
@@ -314,7 +298,7 @@ class gestionarPagosController extends Controller
                                 ]
                             );
                         } catch (\Throwable $e) {
-                            \Illuminate\Support\Facades\Log::error("Fallo al enviar notificación de pago (manual): " . $e->getMessage());
+                            \Illuminate\Support\Facades\Log::error("Fallo al enviar notificación: " . $e->getMessage());
                         }
                     }
                 }
@@ -324,34 +308,27 @@ class gestionarPagosController extends Controller
                 ->where('Id_pago', $idPago)
                 ->where('Codigo_inscripcion', $codigoInscripcion)
                 ->update([
-                    'estado_pago_inscripcion' => $estado,
+                    'estado_pago_inscripcion' => $estado, 
                     'fecha_pago' => $estado === 'Liquidado' ? ($request->fecha_emision ?: now()->toDateString()) : null,
                     'Id_comprobante' => $estado === 'Liquidado' ? $idComprobante : null,
-                    'metodo_pago' => $estado === 'Liquidado' ? ($request->input('metodo_pago') ?: 'manual') : null,
-                    'referencia_pago' => $estado === 'Liquidado' ? ($request->nro_comprobante ?: strtoupper($request->input('metodo_pago', 'MANUAL')) . '-' . now()->format('YmdHis')) : null,
                 ]);
 
-            // Actualizar estado de inscripción si corresponde (esto también envía la notificación por Gmail)
             try {
                 $inscripcionController = new \App\Http\Controllers\Inscripcion_y_Documentacion\gestionarInscripcionController();
                 $inscripcionController->actualizarEstadoInscripcionPorDocumentosYPago($codigoInscripcion);
             } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::error("Fallo al actualizar estado de inscripción tras pago manual: " . $e->getMessage());
+                \Illuminate\Support\Facades\Log::error("Fallo actualización inscripción: " . $e->getMessage());
             }
 
-            $this->registrarBitacora('Actualizó el pago de la inscripción ' . $codigoInscripcion . ' a estado ' . $estado);
+            $this->registrarBitacora('Actualizó el pago ID ' . $idPago . ' para inscripción ' . $codigoInscripcion . ' a estado ' . $estado);
 
             DB::commit();
 
-            return redirect()->route('pagos.index')
-                ->with('success', 'Pago actualizado correctamente.');
+            return redirect()->route('pagos.index')->with('success', 'Pago actualizado correctamente.');
 
         } catch (\Exception $e) {
             DB::rollBack();
-
-            return back()->withErrors([
-                'error' => 'Error al guardar el pago: ' . $e->getMessage()
-            ]);
+            return back()->withErrors(['error' => 'Error al guardar el pago: ' . $e->getMessage()]);
         }
     }
 
@@ -359,15 +336,8 @@ class gestionarPagosController extends Controller
     {
         $pago = $this->buscarPagoInscripcion($idPago, $codigoInscripcion);
 
-        if (!$pago) {
-            return redirect()->route('pagos.index')
-                ->withErrors(['error' => 'No se encontró el pago asignado.']);
-        }
-
-        if (strtolower(trim($pago->estado_pago_inscripcion)) === 'liquidado') {
-            return redirect()->route('pagos.index')
-                ->withErrors(['error' => 'Este pago ya se encuentra liquidado.']);
-        }
+        if (!$pago) return redirect()->route('pagos.index')->withErrors(['error' => 'Pago no encontrado.']);
+        if (strtolower(trim($pago->estado_pago_inscripcion)) === 'liquidado') return redirect()->route('pagos.index')->withErrors(['error' => 'Pago ya liquidado.']);
 
         try {
             $provider = new PayPal;
@@ -395,16 +365,13 @@ class gestionarPagosController extends Controller
 
             if (isset($response['links'])) {
                 foreach ($response['links'] as $link) {
-                    if ($link['rel'] === 'approve') {
-                        return redirect()->away($link['href']);
-                    }
+                    if ($link['rel'] === 'approve') return redirect()->away($link['href']);
                 }
             }
 
-            return back()->withErrors(['error' => 'No se pudo iniciar la pasarela de PayPal.']);
-
+            return back()->withErrors(['error' => 'No se pudo iniciar PayPal.']);
         } catch (\Exception $e) {
-            return back()->withErrors(['error' => 'Error con PayPal: ' . $e->getMessage()]);
+            return back()->withErrors(['error' => 'Error PayPal: ' . $e->getMessage()]);
         }
     }
 
@@ -414,18 +381,10 @@ class gestionarPagosController extends Controller
 
         try {
             $pago = $this->buscarPagoInscripcion($idPago, $codigoInscripcion);
+            if (!$pago) return redirect()->route('pagos.index')->withErrors(['error' => 'Pago no encontrado.']);
+            if (strtolower(trim($pago->estado_pago_inscripcion)) === 'liquidado') return redirect()->route('pagos.index')->with('success', 'Pago ya liquidado.');
 
-            if (!$pago) {
-                return redirect()->route('pagos.index')
-                    ->withErrors(['error' => 'No se encontró el pago asignado.']);
-            }
-
-            if (strtolower(trim($pago->estado_pago_inscripcion)) === 'liquidado') {
-                return redirect()->route('pagos.index')
-                    ->with('success', 'Este pago ya fue liquidado anteriormente.');
-            }
-
-            $nroComprobante = 'COMP-' . now()->format('YmdHis') . '-' . $idPago . '-' . $codigoInscripcion;
+            $nroComprobante = 'COMP-' . now()->format('YmdHis') . '-' . $idPago;
             $archivo = $nroComprobante . '.pdf';
 
             $idComprobante = DB::table('comprobante')->insertGetId([
@@ -434,8 +393,6 @@ class gestionarPagosController extends Controller
                 'archivo' => $archivo,
             ], 'Id_comprobante');
 
-            $referencia = 'PAYPAL-' . now()->format('YmdHis') . '-' . rand(1000, 9999);
-
             DB::table('pago_inscripcion')
                 ->where('Id_pago', $idPago)
                 ->where('Codigo_inscripcion', $codigoInscripcion)
@@ -443,123 +400,78 @@ class gestionarPagosController extends Controller
                     'estado_pago_inscripcion' => 'Liquidado',
                     'fecha_pago' => now()->toDateString(),
                     'Id_comprobante' => $idComprobante,
-                    'metodo_pago' => 'paypal',
-                    'referencia_pago' => $referencia,
                 ]);
 
             $pagoActualizado = $this->buscarPagoInscripcion($idPago, $codigoInscripcion);
-
             Storage::disk('local')->makeDirectory('comprobantes');
-
-            $pdf = Pdf::loadView('Gestion_Financiera.comprobantePdf', [
-                'pago' => $pagoActualizado,
-            ]);
-
+            $pdf = Pdf::loadView('Gestion_Financiera.comprobantePdf', ['pago' => $pagoActualizado]);
             Storage::disk('local')->put('comprobantes/' . $archivo, $pdf->output());
-
             $pdfPath = storage_path('app/comprobantes/' . $archivo);
 
             if (!empty($pagoActualizado->correo)) {
                 try {
-                    Mail::to($pagoActualizado->correo)
-                        ->send(new ComprobantePagoMail($pagoActualizado, $pdfPath));
-                } catch (\Throwable $e) {
-                    // Ignorar
-                }
+                    Mail::to($pagoActualizado->correo)->send(new ComprobantePagoMail($pagoActualizado, $pdfPath));
+                } catch (\Throwable $e) {}
 
-                // Notificar mediante el controlador de notificaciones (CU13)
                 try {
                     $notificador = new \App\Http\Controllers\Gestion_Academica\enviarNotificacionesController();
-                    $notificador->notificarPagoRealizado(
-                        $pagoActualizado->correo,
-                        $pagoActualizado->nombre . ' ' . $pagoActualizado->apellido,
-                        [
-                            'concepto' => $pagoActualizado->concepto_pago,
-                            'monto' => $pagoActualizado->monto,
-                            'nro_comprobante' => $pagoActualizado->nro_comprobante ?? $nroComprobante
-                        ]
-                    );
-                } catch (\Throwable $e) {
-                    \Illuminate\Support\Facades\Log::error("Fallo al enviar notificación de pago (paypal): " . $e->getMessage());
-                }
+                    $notificador->notificarPagoRealizado($pagoActualizado->correo, $pagoActualizado->nombre . ' ' . $pagoActualizado->apellido, ['concepto' => $pagoActualizado->concepto_pago, 'monto' => $pagoActualizado->monto, 'nro_comprobante' => $nroComprobante]);
+                } catch (\Throwable $e) {}
             }
 
-            $this->registrarBitacora('Liquidó pago de inscripción ' . $codigoInscripcion . ' mediante pasarela PayPal');
+            $this->registrarBitacora('Liquidó pago ID ' . $idPago . ' para inscripción ' . $codigoInscripcion . ' con PayPal');
 
-            // Actualizar estado de inscripción si corresponde (esto también envía la notificación por Gmail)
             try {
                 $inscripcionController = new \App\Http\Controllers\Inscripcion_y_Documentacion\gestionarInscripcionController();
                 $inscripcionController->actualizarEstadoInscripcionPorDocumentosYPago($codigoInscripcion);
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::error("Fallo al actualizar estado de inscripción tras pago PayPal: " . $e->getMessage());
-            }
+            } catch (\Throwable $e) {}
 
             DB::commit();
-
-            return redirect()->route('pagos.index')
-                ->with('success', 'Pago con PayPal completado correctamente. Se ha enviado el comprobante a su correo.');
+            return redirect()->route('pagos.index')->with('success', 'Pago con PayPal completado.');
 
         } catch (\Exception $e) {
             DB::rollBack();
-
-            return redirect()->route('pagos.index')
-                ->withErrors(['error' => 'Error al registrar el éxito de PayPal: ' . $e->getMessage()]);
+            return redirect()->route('pagos.index')->withErrors(['error' => 'Error éxito PayPal: ' . $e->getMessage()]);
         }
     }
 
     public function paypalCancel(int $idPago, int $codigoInscripcion)
     {
-        $this->registrarBitacora('Canceló pago de inscripción ' . $codigoInscripcion . ' en pasarela PayPal');
-
-        return redirect()->route('pagos.index')
-            ->withErrors(['error' => 'El pago con PayPal fue cancelado por el usuario.']);
+        $this->registrarBitacora('Canceló pago ID ' . $idPago . ' en PayPal');
+        return redirect()->route('pagos.index')->withErrors(['error' => 'El pago con PayPal fue cancelado.']);
     }
 
     public function emitirComprobante(int $idComprobante)
     {
-        $comprobante = DB::table('comprobante')
-            ->where('Id_comprobante', $idComprobante)
-            ->first();
-
-        if (!$comprobante || empty($comprobante->archivo)) {
-            return back()->withErrors(['error' => 'Comprobante no encontrado.']);
-        }
-
+        $comprobante = DB::table('comprobante')->where('Id_comprobante', $idComprobante)->first();
+        if (!$comprobante || empty($comprobante->archivo)) return back()->withErrors(['error' => 'Comprobante no encontrado.']);
         $path = storage_path('app/comprobantes/' . $comprobante->archivo);
-
-        if (!file_exists($path)) {
-            return back()->withErrors(['error' => 'El archivo del comprobante no existe.']);
-        }
-
+        if (!file_exists($path)) return back()->withErrors(['error' => 'Archivo no existe.']);
         return response()->file($path);
     }
 
     private function buscarPagoInscripcion(int $idPago, int $codigoInscripcion)
     {
         return DB::table('pago_inscripcion as pi')
-            ->join('pago as pa', DB::raw('"pa"."Id_pago"'), '=', DB::raw('"pi"."Id_pago"'))
-            ->join('inscripcion as i', DB::raw('"i"."Codigo_inscripcion"'), '=', DB::raw('"pi"."Codigo_inscripcion"'))
-            ->join('postulante as po', DB::raw('"po"."Id_postulante"'), '=', DB::raw('"i"."Id_postulante"'))
-            ->join('persona as p', DB::raw('"p"."Id_persona"'), '=', DB::raw('"po"."Id_postulante"'))
-            ->leftJoin('comprobante as c', DB::raw('"c"."Id_comprobante"'), '=', DB::raw('"pi"."Id_comprobante"'))
+            ->join('pago as pa', 'pa.Id_pago', '=', 'pi.Id_pago')
+            ->join('inscripcion as i', 'i.Codigo_inscripcion', '=', 'pi.Codigo_inscripcion')
+            ->join('postulante as po', 'po.Id_postulante', '=', 'i.Id_postulante')
+            ->join('persona as p', 'p.Id_persona', '=', 'po.Id_postulante')
+            ->leftJoin('comprobante as c', 'c.Id_comprobante', '=', 'pi.Id_comprobante')
             ->leftJoin('inscripcion_carrera as ic', function ($join) {
-                $join->on(DB::raw('"ic"."Codigo_inscripcion"'), '=', DB::raw('"i"."Codigo_inscripcion"'))
+                $join->on('ic.Codigo_inscripcion', '=', 'i.Codigo_inscripcion')
                      ->where('ic.prioridad', '=', 1);
             })
-            ->leftJoin('carrera as ca', DB::raw('"ca"."Id_carrera"'), '=', DB::raw('"ic"."Id_carrera"'))
+            ->leftJoin('carrera as ca', 'ca.Id_carrera', '=', 'ic.Id_carrera')
             ->select(
-                DB::raw('"pi"."Id_pago" as id_pago'),
-                DB::raw('"pi"."Codigo_inscripcion" as codigo_inscripcion'),
+                'pi.Id_pago as id_pago',
+                'pi.Codigo_inscripcion as codigo_inscripcion',
                 'pi.estado_pago_inscripcion',
                 'pi.fecha_pago',
-                'pi.metodo_pago',
-                'pi.referencia_pago',
-                DB::raw('"pi"."Id_comprobante" as id_comprobante'),
-
+                'pi.Id_comprobante as id_comprobante',
                 'pa.concepto_pago',
                 'pa.monto',
                 'pa.observaciones',
-
                 'p.ci',
                 'p.nombre',
                 'p.apellido',
@@ -568,10 +480,9 @@ class gestionarPagosController extends Controller
                 'p.direccion',
                 'i.estado as estado_inscripcion',
                 'ca.nombre_carrera as carrera_principal',
-
                 'c.nro_comprobante',
                 'c.fecha_emision',
-                'c.archivo'
+                DB::raw('NULL as archivo')
             )
             ->where('pi.Id_pago', $idPago)
             ->where('pi.Codigo_inscripcion', $codigoInscripcion)
@@ -580,10 +491,7 @@ class gestionarPagosController extends Controller
 
     private function registrarBitacora(string $descripcion): void
     {
-        if (!Auth::check()) {
-            return;
-        }
-
+        if (!Auth::check()) return;
         DB::table('bitacora')->insert([
             'tipo' => 'Gestion Financiera',
             'descripcion' => $descripcion,

@@ -519,37 +519,7 @@
                                         </button>
                                     </form>
 
-                                    <!-- Procesamiento Manual -->
-                                    <details style="position: relative;">
-                                        <summary class="btn-success" style="list-style: none; padding: 6px 12px; border-radius: 6px; text-align: center;">Manual</summary>
-                                        
-                                        <form action="{{ route('pagos.inscripcion.guardar') }}" method="POST" class="inline-form" style="position: absolute; background: white; border: 1px solid #ccc; padding: 12px; border-radius: 8px; z-index: 10; width: 280px; top: 30px; right: 0; box-shadow: 0 4px 12px rgba(0,0,0,0.15); text-align: left;">
-                                            @csrf
-                                            <input type="hidden" name="Id_pago" value="{{ $item->id_pago }}">
-                                            <input type="hidden" name="Codigo_inscripcion" value="{{ $item->codigo_inscripcion }}">
 
-                                            <div style="margin-bottom: 8px;">
-                                                <label style="font-weight: bold; font-size: 12px; color:#0b2d6b;">Estado</label>
-                                                <select name="estado_pago_inscripcion" required style="width: 100%;">
-                                                    <option value="Pendiente" {{ $item->estado_pago_inscripcion == 'Pendiente' ? 'selected' : '' }}>Pendiente</option>
-                                                    <option value="Liquidado" {{ $item->estado_pago_inscripcion == 'Liquidado' ? 'selected' : '' }}>Liquidado</option>
-                                                    <option value="Rechazado" {{ $item->estado_pago_inscripcion == 'Rechazado' ? 'selected' : '' }}>Rechazado</option>
-                                                </select>
-                                            </div>
-                                            <div style="margin-bottom: 8px;">
-                                                <label style="font-weight: bold; font-size: 12px; color:#0b2d6b;">Nro Comprobante</label>
-                                                <input type="text" name="nro_comprobante" value="{{ $item->nro_comprobante }}" placeholder="Opcional" style="width: 100%;">
-                                            </div>
-                                            <div style="margin-bottom: 8px;">
-                                                <label style="font-weight: bold; font-size: 12px; color:#0b2d6b;">Fecha Emisión</label>
-                                                <input type="date" name="fecha_emision" value="{{ $item->fecha_emision ? substr($item->fecha_emision, 0, 10) : date('Y-m-d') }}" style="width: 100%;">
-                                            </div>
-
-                                            <button type="submit" class="btn-success" style="width: 100%;">
-                                                Guardar
-                                            </button>
-                                        </form>
-                                    </details>
                                 @else
                                     @if($item->id_comprobante)
                                         <a href="{{ route('emitirComprobante', $item->id_comprobante) }}" class="btn-secondary" style="padding: 6px 12px; border-radius: 6px; background: #4b5563;" target="_blank">

@@ -222,6 +222,11 @@
                 style="cursor:pointer;">
                 CU09 - Gestionar Docentes
             </div>
+            <div onclick="window.location='{{ route('reportes.index') }}'"
+                class="{{ request()->routeIs('reportes.*') ? 'activo' : '' }}"
+                style="cursor:pointer;">
+                CU18 - Generar Reportes
+            </div>
 
         </div>
 
@@ -245,6 +250,12 @@
                     <h3>Gestionar Aulas</h3>
                     <p>
                         Registrar aulas, editar datos, asignar capacidad y consultar disponibilidad.
+                    </p>
+                </div>
+                <div class="card" onclick="window.location='{{ route('reportes.index') }}'">
+                    <h3>Generar Reportes</h3>
+                    <p>
+                        Crear reportes estadísticos y ranking de postulantes, grupos, cupos y resultados.
                     </p>
                 </div>
             </div>

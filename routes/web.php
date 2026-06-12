@@ -11,6 +11,7 @@ use App\Http\Controllers\Gestion_Academica\gestionarGruposController;
 use App\Http\Controllers\Gestion_Academica\gestionarGestionController;
 use App\Http\Controllers\Gestion_Academica\gestionarModalidadController;
 use App\Http\Controllers\Logistica_Recursos_y_Reportes\gestionarDocentesController;
+use App\Http\Controllers\Logistica_Recursos_y_Reportes\reporteController;
 use App\Http\Controllers\Inscripcion_y_Documentacion\gestionarInscripcionController;
 use App\Http\Controllers\Gestion_Financiera\gestionarPagosController;
 use App\Http\Controllers\Gestion_Academica\gestionarMateriasYHorariosController;
@@ -156,6 +157,11 @@ Route::middleware('auth')->group(function () {
     ->name('docentes.documentos.form');
     Route::post('/docentes/{id}/documentos', [gestionarDocentesController::class, 'guardarDocumentos'])
     ->name('docentes.documentos.guardar');
+
+    // CU18 - Generar Reportes
+    Route::get('/reportes', [reporteController::class, 'index'])->name('reportes.index');
+    Route::post('/reportes/generar', [reporteController::class, 'generar'])->name('reportes.generar');
+    Route::post('/reportes/exportar', [reporteController::class, 'exportar'])->name('reportes.exportar');
 });
 
 Route::middleware('auth')->group(function () {
@@ -284,3 +290,5 @@ Route::middleware('auth')->group(function () {
         return redirect()->route('pagos.index');
     })->name('gestion-financiera.menu');
 });
+
+

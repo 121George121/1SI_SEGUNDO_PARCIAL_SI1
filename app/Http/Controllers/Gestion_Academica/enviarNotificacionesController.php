@@ -11,7 +11,7 @@ use App\Mail\NotificacionSistemaMail;
 class enviarNotificacionesController extends Controller
 {
     /**
-     * Método principal para registrar e intentar enviar una notificación.
+
      *
      * @param string $correo
      * @param string $titulo
@@ -25,7 +25,7 @@ class enviarNotificacionesController extends Controller
         $fecha = now()->toDateString();
         $hora = now()->format('H:i:s');
         
-        // 1. Guardar la notificación con estado 'pendiente' en la base de datos
+       
         $idNotificacion = DB::table('notificacion')->insertGetId([
             'tipo_notificacion' => $tipo_notificacion,
             'titulo' => $titulo,
@@ -39,14 +39,14 @@ class enviarNotificacionesController extends Controller
 
         $estado_envio = 'fallido';
 
-        // Validar formato del correo antes de enviar
+      
         if (filter_var($correo, FILTER_VALIDATE_EMAIL)) {
             try {
-                // 2. Intentar enviar el correo electrónico
+            
                 Mail::to($correo)->send(new NotificacionSistemaMail($titulo, $mensaje));
                 $estado_envio = 'enviado';
             } catch (\Throwable $e) {
-                // Registrar error en los logs de Laravel para auditoría
+              
                 Log::error("Fallo al enviar correo a {$correo}: " . $e->getMessage());
                 $estado_envio = 'fallido';
             }
@@ -55,7 +55,6 @@ class enviarNotificacionesController extends Controller
             $estado_envio = 'fallido';
         }
 
-        // 3. Actualizar estado_envio como 'enviado' o 'fallido'
         DB::table('notificacion')
             ->where('Id_notificacion', $idNotificacion)
             ->update([
@@ -65,9 +64,7 @@ class enviarNotificacionesController extends Controller
         return $estado_envio === 'enviado';
     }
 
-    /**
-     * Notificar el registro de un pago realizado.
-     */
+    
     public function notificarPagoRealizado($correo, $nombre, $datosPago)
     {
         $concepto = $datosPago['concepto'] ?? 'Pago Preuniversitario';
@@ -80,9 +77,7 @@ class enviarNotificacionesController extends Controller
         return $this->enviarNotificacion($correo, $titulo, $mensaje, 'pago realizado', $nombre);
     }
 
-    /**
-     * Notificar la asignación a un grupo académico.
-     */
+   
     public function notificarAsignacionGrupo($correo, $nombre, $grupo)
     {
         $sigla = $grupo['sigla'] ?? 'N/A';
@@ -96,9 +91,7 @@ class enviarNotificacionesController extends Controller
         return $this->enviarNotificacion($correo, $titulo, $mensaje, 'asignación a grupo', $nombre);
     }
 
-    /**
-     * Notificar cuando se registra una nota académica.
-     */
+   
     public function notificarNotaRegistrada($correo, $nombre, $nota)
     {
         $materia = $nota['materia'] ?? 'N/A';
@@ -111,9 +104,7 @@ class enviarNotificacionesController extends Controller
         return $this->enviarNotificacion($correo, $titulo, $mensaje, 'nota registrada', $nombre);
     }
 
-    /**
-     * Notificar un cambio de horario.
-     */
+    
     public function notificarCambioHorario($correo, $nombre, $horario)
     {
         $materia = $horario['materia'] ?? 'N/A';
@@ -128,9 +119,7 @@ class enviarNotificacionesController extends Controller
         return $this->enviarNotificacion($correo, $titulo, $mensaje, 'cambio de horario', $nombre);
     }
 
-    /**
-     * Notificar la revisión de documentos.
-     */
+  
     public function notificarRevisionDocumentos($correo, $nombre, $detallesDocumentos)
     {
         $titulo = 'Revisión de Documentación - CUP FICCT';
@@ -149,9 +138,7 @@ class enviarNotificacionesController extends Controller
         return $this->enviarNotificacion($correo, $titulo, $mensaje, 'revision documentos', $nombre);
     }
 
-    /**
-     * Enviar una notificación general.
-     */
+    
     public function enviarNotificacionGeneral($correo, $titulo, $mensaje, $tipo)
     {
         $destinatario = explode('@', $correo)[0] ?? 'Usuario';
