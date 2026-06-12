@@ -20,7 +20,7 @@ class enviarNotificacionesController extends Controller
      * @param string $destinatario
      * @return bool Retorna true si se envió correctamente, false si falló.
      */
-    public function enviarNotificacion($correo, $titulo, $mensaje, $tipo_notificacion, $destinatario)
+    public function enviarNotificacion($correo, $titulo, $mensaje, $tipo_notificacion, $destinatario, $enviarCorreo = true)
     {
         $fecha = now()->toDateString();
         $hora = now()->format('H:i:s');
@@ -37,22 +37,23 @@ class enviarNotificacionesController extends Controller
             'estado_envio' => 'pendiente',
         ], 'Id_notificacion');
 
-        $estado_envio = 'fallido';
+        $estado_envio = 'enviado';
 
       
-        if (filter_var($correo, FILTER_VALIDATE_EMAIL)) {
-            try {
-            
-                Mail::to($correo)->send(new NotificacionSistemaMail($titulo, $mensaje));
-                $estado_envio = 'enviado';
-            } catch (\Throwable $e) {
-              
-                Log::error("Fallo al enviar correo a {$correo}: " . $e->getMessage());
+        if ($enviarCorreo) {
+            $estado_envio = 'fallido';
+            if (filter_var($correo, FILTER_VALIDATE_EMAIL)) {
+                try {
+                    Mail::to($correo)->send(new NotificacionSistemaMail($titulo, $mensaje));
+                    $estado_envio = 'enviado';
+                } catch (\Throwable $e) {
+                    Log::error("Fallo al enviar correo a {$correo}: " . $e->getMessage());
+                    $estado_envio = 'fallido';
+                }
+            } else {
+                Log::warning("Correo inválido provisto para la notificación: '{$correo}'");
                 $estado_envio = 'fallido';
             }
-        } else {
-            Log::warning("Correo inválido provisto para la notificación: '{$correo}'");
-            $estado_envio = 'fallido';
         }
 
         DB::table('notificacion')
@@ -74,7 +75,7 @@ class enviarNotificacionesController extends Controller
         $titulo = 'Confirmación de Pago Realizado - CUP FICCT';
         $mensaje = "Hola, {$nombre}.\n\nSe ha registrado de manera exitosa tu pago en nuestro sistema.\n\nDetalles del Pago:\n- Concepto: {$concepto}\n- Monto: Bs. {$monto}\n- Comprobante: {$comprobante}\n\nGracias por realizar tu pago a tiempo.";
 
-        return $this->enviarNotificacion($correo, $titulo, $mensaje, 'pago realizado', $nombre);
+        return $this->enviarNotificacion($correo, $titulo, $mensaje, 'pago realizado', $nombre, false);
     }
 
    
@@ -135,7 +136,7 @@ class enviarNotificacionesController extends Controller
         
         $mensaje .= "\nPor favor, ingresa al portal si necesitas corregir algún documento observado.";
 
-        return $this->enviarNotificacion($correo, $titulo, $mensaje, 'revision documentos', $nombre);
+        return $this->enviarNotificacion($correo, $titulo, $mensaje, 'revision documentos', $nombre, false);
     }
 
     

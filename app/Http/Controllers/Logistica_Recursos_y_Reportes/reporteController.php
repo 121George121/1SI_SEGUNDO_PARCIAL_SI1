@@ -14,6 +14,10 @@ class reporteController extends Controller
      */
     public function index()
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $gestiones = DB::table('gestion')
             ->select('Id_gestion', 'anio', 'periodo', 'estado')
             ->orderBy('anio', 'desc')
@@ -40,6 +44,10 @@ class reporteController extends Controller
      */
     public function generar(Request $request)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->validate([
             'tipo_reporte' => 'required|string|in:general,aprobados,reprobados,promedios,grupos,materias,docentes,ranking_grupos',
             'Id_gestion' => 'nullable|integer',
@@ -69,6 +77,10 @@ class reporteController extends Controller
      */
     public function exportar(Request $request)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->validate([
             'tipo_reporte' => 'required|string|in:general,aprobados,reprobados,promedios,grupos,materias,docentes,ranking_grupos',
             'format' => 'required|string|in:pdf,excel',
@@ -267,7 +279,10 @@ class reporteController extends Controller
                     ->leftJoin('grupo as g', 'g.Id_grupo', '=', 'gm.Id_grupo')
                     ->leftJoin('materia as mat', 'mat.Id_materia', '=', 'gm.Id_materia')
                     ->leftJoin('gestion as ge', 'ge.Id_gestion', '=', 'g.Id_gestion')
-                    ->leftJoin('grupo_horario as gh', 'gh.Id_grupo', '=', 'g.Id_grupo')
+                    ->leftJoin('grupo_horario as gh', function($join) {
+                        $join->on('gh.Id_grupo', '=', 'g.Id_grupo')
+                             ->on('gh.Id_materia', '=', 'gm.Id_materia');
+                    })
                     ->leftJoin('horario as h', 'h.Id_horario', '=', 'gh.Id_horario')
                     ->leftJoin('grupo_postulante as gpos', 'gpos.Id_grupo', '=', 'g.Id_grupo')
                     ->leftJoin('inscripcion as ins', 'ins.Id_postulante', '=', 'gpos.Id_postulante')
@@ -603,6 +618,16 @@ No agregues texto explicativo ni bloques de código markdown, solo el objeto JSO
             ['a', 'e', 'i', 'o', 'u', 'A', 'E', 'I', 'O', 'U', 'n', 'N'],
             $cadena
         );
+    }
+
+    private function validarPrerrequisitos()
+    {
+        if (DB::table('gestion')->count() === 0) {
+            return redirect()->route('menu')->withErrors([
+                'error' => 'Debe registrar al menos una gestión antes de acceder a la sección de reportes.'
+            ]);
+        }
+        return null;
     }
 }
 

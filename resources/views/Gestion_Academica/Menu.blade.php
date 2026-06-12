@@ -75,6 +75,14 @@
         background: #dc2626;
     }
 
+    .menu-modulo a.deshabilitado {
+        background: rgba(120, 120, 120, 0.2) !important;
+        color: #9ca3af !important;
+        cursor: not-allowed !important;
+        pointer-events: none !important;
+        opacity: 0.6;
+    }
+
     .logout {
         margin-top: auto;
         padding: 16px;
@@ -299,20 +307,39 @@
         <nav class="menu-modulo">
             <a href="{{ route('menu') }}">Volver al Dashboard</a>
 
+            @php
+                $hasGestiones = \Illuminate\Support\Facades\DB::table('gestion')->exists();
+                $hasAulas = \Illuminate\Support\Facades\DB::table('aula')->exists();
+                $hasModalidades = \Illuminate\Support\Facades\DB::table('modalidad')->exists();
+                $hasTurnos = \Illuminate\Support\Facades\DB::table('turno')->exists();
+                $hasMaterias = \Illuminate\Support\Facades\DB::table('materia')->exists();
+                $hasDocentes = \Illuminate\Support\Facades\DB::table('docente')->exists();
+                $hasGrupos = \Illuminate\Support\Facades\DB::table('grupo')->exists();
+                $hasPostulantes = \Illuminate\Support\Facades\DB::table('postulante')->exists();
+
+                $disableGrupos = !$hasGestiones || !$hasAulas || !$hasModalidades || !$hasTurnos;
+                $disableAsignarPostulantes = !$hasGrupos || !$hasPostulantes;
+                $disableAsignarDocentes = !$hasGrupos || !$hasMaterias || !$hasDocentes;
+                $disableEvaluaciones = !$hasGrupos;
+                $disableAdmision = !$hasGestiones;
+            @endphp
+
             <a href="{{ route('carreras-cupos.index') }}"
                 class="{{ request()->routeIs('carreras-cupos.*') ? 'activo' : '' }}">
                 CU06 - Carreras y Cupos
             </a>
 
-            <a href="{{ route('grupos.index') }}" class="{{ request()->routeIs('grupos.*') ? 'activo' : '' }}">
+            <a href="{{ $disableGrupos ? '#' : route('grupos.index') }}" 
+               class="{{ request()->routeIs('grupos.*') ? 'activo' : '' }} {{ $disableGrupos ? 'deshabilitado' : '' }}"
+               title="{{ $disableGrupos ? 'Requiere registrar previamente: Gestiones, Aulas, Modalidades y Turnos.' : '' }}">
                 CU11 - Gestionar Grupos
             </a>
 
-            <a href="{{ route('postulantes-grupos.index') }}" class="{{ request()->routeIs('postulantes-grupos.*') ? 'activo' : '' }}">
+            <a href="{{ $disableAsignarPostulantes ? '#' : route('postulantes-grupos.index') }}" 
+               class="{{ request()->routeIs('postulantes-grupos.*') ? 'activo' : '' }} {{ $disableAsignarPostulantes ? 'deshabilitado' : '' }}"
+               title="{{ $disableAsignarPostulantes ? 'Requiere registrar previamente: Grupos y Postulantes.' : '' }}">
                 CU12 - Asignar Postulantes a Grupos
             </a>
-
-
 
             <a href="{{ route('gestiones.index') }}" class="{{ request()->routeIs('gestiones.*') ? 'activo' : '' }}">
                 Gestionar Gestiones
@@ -330,17 +357,21 @@
                 CU14 - Gestionar Horarios
             </a>
 
-            <a href="{{ route('asignaciones-docentes.index') }}"
-                class="{{ request()->routeIs('asignaciones-docentes.*') ? 'activo' : '' }}">
+            <a href="{{ $disableAsignarDocentes ? '#' : route('asignaciones-docentes.index') }}" 
+               class="{{ request()->routeIs('asignaciones-docentes.*') ? 'activo' : '' }} {{ $disableAsignarDocentes ? 'deshabilitado' : '' }}"
+               title="{{ $disableAsignarDocentes ? 'Requiere registrar previamente: Grupos, Materias y Docentes.' : '' }}">
                 CU15 - Asignar Docentes a Grupos y Materias
             </a>
 
-            <a href="{{ route('evaluaciones-notas.index') }}"
-                class="{{ request()->routeIs('evaluaciones-notas.*') || request()->routeIs('evaluaciones.*') || request()->routeIs('notas.*') ? 'activo' : '' }}">
+            <a href="{{ $disableEvaluaciones ? '#' : route('evaluaciones-notas.index') }}" 
+               class="{{ request()->routeIs('evaluaciones-notas.*') || request()->routeIs('evaluaciones.*') || request()->routeIs('notas.*') ? 'activo' : '' }} {{ $disableEvaluaciones ? 'deshabilitado' : '' }}"
+               title="{{ $disableEvaluaciones ? 'Requiere registrar previamente: Grupos.' : '' }}">
                 CU16 - Gestionar Evaluaciones y Notas
             </a>
 
-            <a href="{{ route('admision.index') }}" class="{{ request()->routeIs('admision.*') ? 'activo' : '' }}">
+            <a href="{{ $disableAdmision ? '#' : route('admision.index') }}" 
+               class="{{ request()->routeIs('admision.*') ? 'activo' : '' }} {{ $disableAdmision ? 'deshabilitado' : '' }}"
+               title="{{ $disableAdmision ? 'Requiere registrar previamente: Gestiones.' : '' }}">
                 CU17 - Gestionar Admisión Final
             </a>
         </nav>

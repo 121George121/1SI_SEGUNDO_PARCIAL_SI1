@@ -275,6 +275,32 @@ return new class extends Migration
                 ->onDelete('cascade');
         });
 
+        Schema::create('preferencia_inscripcion', function (Blueprint $table) {
+            $table->increments('Id_preferencia');
+            $table->unsignedInteger('Codigo_inscripcion');
+            $table->unsignedInteger('Id_modalidad');
+            $table->unsignedInteger('Id_turno');
+            $table->string('estado', 20)->default('activo');
+
+            $table->foreign('Codigo_inscripcion')
+                ->references('Codigo_inscripcion')
+                ->on('inscripcion')
+                ->onUpdate('cascade')
+                ->onDelete('cascade');
+
+            $table->foreign('Id_modalidad')
+                ->references('Id_modalidad')
+                ->on('modalidad')
+                ->onUpdate('cascade')
+                ->onDelete('cascade');
+
+            $table->foreign('Id_turno')
+                ->references('Id_turno')
+                ->on('turno')
+                ->onUpdate('cascade')
+                ->onDelete('cascade');
+        });
+
         Schema::create('documento', function (Blueprint $table) {
             $table->increments('Id_documento');
             $table->string('tipo_documento', 50);
@@ -576,6 +602,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::dropIfExists('preferencia_inscripcion');
         Schema::dropIfExists('asistencia');
         Schema::dropIfExists('resultadoacademico');
         Schema::dropIfExists('nota');

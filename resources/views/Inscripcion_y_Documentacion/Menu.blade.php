@@ -14,6 +14,13 @@
         .menu-modulo { margin-top: 16px; padding: 0 12px; display: flex; flex-direction: column; gap: 8px; }
         .menu-modulo a { background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; text-align: center; color: white; text-decoration: none; font-weight: bold; }
         .menu-modulo a:hover, .menu-modulo a.activo { background: #dc2626; }
+        .menu-modulo a.deshabilitado {
+            background: rgba(120, 120, 120, 0.2) !important;
+            color: #9ca3af !important;
+            cursor: not-allowed !important;
+            pointer-events: none !important;
+            opacity: 0.6;
+        }
         .logout { margin-top: auto; padding: 16px; }
         .logout button { width: 100%; padding: 12px; background: #dc2626; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
         main { margin-left: 280px; flex: 1; padding: 24px; }
@@ -28,14 +35,21 @@
     <nav class="menu-modulo">
         <a href="{{ route('menu') }}">Volver al Dashboard</a>
         <a href="{{ route('documentos.index') }}" class="{{ request()->routeIs('documentos.*') ? 'activo' : '' }}">CU4 - Gestionar Documentos</a>
-    </nav>
+        
+        @php
+            $hasGestiones = \Illuminate\Support\Facades\DB::table('gestion')->exists();
+            $hasCarreras = \Illuminate\Support\Facades\DB::table('carrera')->exists();
+            $hasModalidades = \Illuminate\Support\Facades\DB::table('modalidad')->exists();
+            $hasTurnos = \Illuminate\Support\Facades\DB::table('turno')->exists();
+            $disableInscripcion = !$hasGestiones || !$hasCarreras || !$hasModalidades || !$hasTurnos;
+        @endphp
 
-    <div class="menu-modulo">
-        <a href="{{ route('inscripcion.index') }}"
-        class="{{ request()->routeIs('inscripcion.*') ? 'activo' : '' }}">
-        CU03 - Gestionar Inscripción
-    </a>
-    </div>
+        <a href="{{ $disableInscripcion ? '#' : route('inscripcion.index') }}"
+           class="{{ request()->routeIs('inscripcion.*') ? 'activo' : '' }} {{ $disableInscripcion ? 'deshabilitado' : '' }}"
+           title="{{ $disableInscripcion ? 'Requiere registrar previamente: Gestiones, Carreras, Modalidades y Turnos.' : '' }}">
+            CU03 - Gestionar Inscripción
+        </a>
+    </nav>
     
     <div class="logout">
         <form action="{{ route('logout') }}" method="POST">

@@ -11,6 +11,10 @@ class gestionarGruposController extends Controller
 {
     public function index()
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $grupos = DB::table('grupo as gr')
             ->leftJoin('aula as a', DB::raw('"a"."Id_aula"'), '=', DB::raw('"gr"."Id_aula"'))
             ->leftJoin('modalidad as m', DB::raw('"m"."Id_modalidad"'), '=', DB::raw('"gr"."Id_modalidad"'))
@@ -96,6 +100,10 @@ class gestionarGruposController extends Controller
 
     public function store(Request $request)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->validate([
             'sigla_grupo' => 'required|string|max:50',
             'capacidad_max' => 'required|integer|min:1',
@@ -159,6 +167,10 @@ class gestionarGruposController extends Controller
 
     public function update(Request $request, $id)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->validate([
             'sigla_grupo' => 'required|string|max:50',
             'capacidad_max' => 'required|integer|min:1',
@@ -224,6 +236,10 @@ class gestionarGruposController extends Controller
 
     public function destroy($id)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         DB::beginTransaction();
 
         try {
@@ -250,6 +266,453 @@ class gestionarGruposController extends Controller
         }
     }
 
+    public function autogenerarView(Request $request)
+    {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
+        $gestiones = DB::table('gestion')
+            ->select(
+                DB::raw('"Id_gestion" as id_gestion'),
+                'anio',
+                'periodo',
+                'estado'
+            )
+            ->whereRaw("LOWER(TRIM(estado)) = 'activo'")
+            ->orderBy('anio', 'desc')
+            ->orderBy('periodo')
+            ->get();
+
+        $idGestion = $request->input('Id_gestion');
+        if (!$idGestion) {
+            $activeGestion = $gestiones->first();
+            $idGestion = $activeGestion ? $activeGestion->id_gestion : null;
+        }
+
+        $this->actualizarEstadosPostulantes($idGestion);
+
+        // 1. Total validated students for the selected gestion
+        $totalValidados = DB::table('inscripcion as i')
+            ->join('postulante as po', 'po.Id_postulante', '=', 'i.Id_postulante')
+            ->where('i.estado', '=', 'Inscrito')
+            ->where('po.estado_inscripcion', '=', 'Inscrito')
+            ->where('i.Id_gestion', '=', $idGestion)
+            ->count();
+
+        // 2. Distributions
+        $distribucion = DB::table('inscripcion as i')
+            ->join('postulante as po', 'po.Id_postulante', '=', 'i.Id_postulante')
+            ->join('preferencia_inscripcion as pi', 'pi.Codigo_inscripcion', '=', 'i.Codigo_inscripcion')
+            ->join('modalidad as m', 'm.Id_modalidad', '=', 'pi.Id_modalidad')
+            ->join('turno as t', 't.Id_turno', '=', 'pi.Id_turno')
+            ->select(
+                'm.nombre_modalidad',
+                't.nombre as nombre_turno',
+                DB::raw('count("i"."Codigo_inscripcion") as total')
+            )
+            ->where('i.estado', '=', 'Inscrito')
+            ->where('po.estado_inscripcion', '=', 'Inscrito')
+            ->where('i.Id_gestion', '=', $idGestion)
+            ->groupBy('m.nombre_modalidad', 't.nombre')
+            ->get();
+
+        $distribucionSinGrupo = DB::table('inscripcion as i')
+            ->join('postulante as po', 'po.Id_postulante', '=', 'i.Id_postulante')
+            ->join('preferencia_inscripcion as pi', 'pi.Codigo_inscripcion', '=', 'i.Codigo_inscripcion')
+            ->join('modalidad as m', 'm.Id_modalidad', '=', 'pi.Id_modalidad')
+            ->join('turno as t', 't.Id_turno', '=', 'pi.Id_turno')
+            ->select(
+                'm.nombre_modalidad',
+                't.nombre as nombre_turno',
+                DB::raw('count("i"."Codigo_inscripcion") as total')
+            )
+            ->where('i.estado', '=', 'Inscrito')
+            ->where('po.estado_inscripcion', '=', 'Inscrito')
+            ->where('i.Id_gestion', '=', $idGestion)
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('grupo_postulante as gp')
+                    ->whereRaw('gp."Id_postulante" = po."Id_postulante"');
+            })
+            ->groupBy('m.nombre_modalidad', 't.nombre')
+            ->get();
+
+        $modalidadesValidas = DB::table('modalidad')->whereRaw("LOWER(TRIM(estado)) = 'activo'")->get();
+        $turnosValidos = DB::table('turno')->whereRaw("LOWER(TRIM(estado)) = 'activo'")->get();
+
+        $stats = [];
+        foreach ($modalidadesValidas as $m) {
+            foreach ($turnosValidos as $t) {
+                $stats[$m->nombre_modalidad][$t->nombre] = [
+                    'total' => 0,
+                    'sin_grupo' => 0
+                ];
+            }
+        }
+
+        foreach ($distribucion as $row) {
+            if (isset($stats[$row->nombre_modalidad][$row->nombre_turno])) {
+                $stats[$row->nombre_modalidad][$row->nombre_turno]['total'] = $row->total;
+            }
+        }
+
+        foreach ($distribucionSinGrupo as $row) {
+            if (isset($stats[$row->nombre_modalidad][$row->nombre_turno])) {
+                $stats[$row->nombre_modalidad][$row->nombre_turno]['sin_grupo'] = $row->total;
+            }
+        }
+
+        return view('Gestion_Academica.autogenerarGrupos', compact(
+            'gestiones',
+            'idGestion',
+            'totalValidados',
+            'stats',
+            'modalidadesValidas',
+            'turnosValidos'
+        ));
+    }
+
+    public function autogenerarStore(Request $request)
+    {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
+        $request->validate([
+            'Id_gestion' => 'required|exists:gestion,Id_gestion',
+            'estudiantes_por_aula' => 'required|integer|min:1',
+        ]);
+
+        $idGestion = $request->Id_gestion;
+        $C = $request->estudiantes_por_aula;
+
+        $this->actualizarEstadosPostulantes($idGestion);
+
+        // Fetch all validated students without group in this gestion
+        $postulantes = DB::table('inscripcion as i')
+            ->join('postulante as po', 'po.Id_postulante', '=', 'i.Id_postulante')
+            ->join('persona as p', 'p.Id_persona', '=', 'po.Id_postulante')
+            ->join('preferencia_inscripcion as pi', 'pi.Codigo_inscripcion', '=', 'i.Codigo_inscripcion')
+            ->select(
+                'po.Id_postulante',
+                'pi.Id_modalidad',
+                'pi.Id_turno'
+            )
+            ->where('i.estado', '=', 'Inscrito')
+            ->where('po.estado_inscripcion', '=', 'Inscrito')
+            ->where('i.Id_gestion', '=', $idGestion)
+            ->whereNotExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('grupo_postulante as gp')
+                    ->whereRaw('gp."Id_postulante" = po."Id_postulante"');
+            })
+            ->get();
+
+        if ($postulantes->isEmpty()) {
+            return back()->withErrors([
+                'error' => 'No hay postulantes validados pendientes de asignación en la gestión seleccionada.'
+            ])->withInput();
+        }
+
+        // Fetch active classrooms
+        $aulas = DB::table('aula')
+            ->whereRaw("LOWER(TRIM(estado)) = 'activo'")
+            ->orderBy('capacidad', 'desc')
+            ->get();
+
+        if ($aulas->isEmpty()) {
+            return back()->withErrors([
+                'error' => 'No hay aulas activas registradas en el sistema. Debe activar o registrar al menos una antes de continuar.'
+            ])->withInput();
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $grouped = $postulantes->groupBy(function($item) {
+                return $item->Id_modalidad . '-' . $item->Id_turno;
+            });
+
+            $aulaIndex = 0;
+            $totalGruposCreados = 0;
+            $totalAsignados = 0;
+
+            foreach ($grouped as $key => $studentsInPreferencia) {
+                $first = $studentsInPreferencia->first();
+                $idModalidad = $first->Id_modalidad;
+                $idTurno = $first->Id_turno;
+
+                $modalidadObj = DB::table('modalidad')->where('Id_modalidad', $idModalidad)->first();
+                $turnoObj = DB::table('turno')->where('Id_turno', $idTurno)->first();
+
+                $modalidadNombre = $modalidadObj ? $modalidadObj->nombre_modalidad : 'Mod';
+                $turnoNombre = $turnoObj ? $turnoObj->nombre : 'Tur';
+
+                $modPrefix = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $modalidadNombre), 0, 3));
+                $turPrefix = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $turnoNombre), 0, 1));
+
+                $remainingStudents = $studentsInPreferencia->pluck('Id_postulante')->toArray();
+
+                while (!empty($remainingStudents)) {
+                    // Pick classroom matching capacity or cycle
+                    $candidatas = $aulas->filter(function($a) use ($C) {
+                        return $a->capacidad >= $C;
+                    });
+                    if ($candidatas->isNotEmpty()) {
+                        $aula = $candidatas->values()->get($aulaIndex % $candidatas->count());
+                        $aulaIndex++;
+                    } else {
+                        $aula = $aulas->first(); // pick largest capacity
+                    }
+
+                    $grupoCapacidadMax = min($C, $aula->capacidad ?? $C);
+                    $chunk = array_splice($remainingStudents, 0, $grupoCapacidadMax);
+
+                    // Generate unique sigla
+                    $sec = 1;
+                    do {
+                        $sigla = sprintf("%s-%s-%02d", $modPrefix, $turPrefix, $sec);
+                        $existe = DB::table('grupo')
+                            ->where('sigla_grupo', $sigla)
+                            ->where('Id_gestion', $idGestion)
+                            ->exists();
+                        $sec++;
+                    } while ($existe);
+
+                    // Insert group
+                    $idGrupo = DB::table('grupo')->insertGetId([
+                        'sigla_grupo' => $sigla,
+                        'capacidad_max' => $grupoCapacidadMax,
+                        'estado' => 'activo',
+                        'cant_estudiantes' => count($chunk),
+                        'Id_aula' => $aula->Id_aula,
+                        'Id_modalidad' => $idModalidad,
+                        'Id_turno' => $idTurno,
+                        'Id_gestion' => $idGestion,
+                    ], 'Id_grupo');
+
+                    $totalGruposCreados++;
+
+                    // Assign students
+                    foreach ($chunk as $idPostulante) {
+                        DB::table('grupo_postulante')->insert([
+                            'Id_grupo' => $idGrupo,
+                            'Id_postulante' => $idPostulante,
+                            'estado' => 'activo',
+                            'fecha_asignacion' => now()->toDateString(),
+                        ]);
+                        $totalAsignados++;
+                    }
+                }
+            }
+
+            $this->registrarBitacora(
+                'Gestion Academica',
+                "Autogeneró {$totalGruposCreados} grupos y asignó a {$totalAsignados} postulantes validados."
+            );
+
+            DB::commit();
+
+            return redirect()->route('grupos.index')
+                ->with('success', "Proceso completado. Se han autogenerado exitosamente {$totalGruposCreados} grupos y se asignaron {$totalAsignados} estudiantes.");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()->withErrors([
+                'error' => 'Error al autogenerar grupos: ' . $e->getMessage()
+            ])->withInput();
+        }
+    }
+
+    public function horarioView($id)
+    {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
+        $grupo = DB::table('grupo as g')
+            ->join('aula as a', 'a.Id_aula', '=', 'g.Id_aula')
+            ->join('modalidad as m', 'm.Id_modalidad', '=', 'g.Id_modalidad')
+            ->join('turno as t', 't.Id_turno', '=', 'g.Id_turno')
+            ->join('gestion as ge', 'ge.Id_gestion', '=', 'g.Id_gestion')
+            ->select(
+                'g.Id_grupo as id_grupo',
+                'g.sigla_grupo',
+                'g.Id_turno as id_turno',
+                't.nombre as nombre_turno',
+                'a.nro_aula',
+                'a.ubicacion',
+                'm.nombre_modalidad',
+                'ge.anio',
+                'ge.periodo'
+            )
+            ->where('g.Id_grupo', $id)
+            ->first();
+
+        if (!$grupo) {
+            return redirect()->route('grupos.index')->withErrors(['error' => 'Grupo no encontrado.']);
+        }
+
+        // Obtener las materias asignadas a este grupo
+        $materias = DB::table('grupo_materia as gm')
+            ->join('materia as m', 'm.Id_materia', '=', 'gm.Id_materia')
+            ->select('m.Id_materia as id_materia', 'm.nombre')
+            ->where('gm.Id_grupo', $id)
+            ->get();
+
+        // Obtener horarios asociados a este turno y activos
+        $horarios = DB::table('horario')
+            ->select(
+                'Id_horario as id_horario',
+                'dia',
+                'hora_inicio',
+                'hora_fin',
+                'estado',
+                'Id_turno'
+            )
+            ->where('Id_turno', $grupo->id_turno)
+            ->whereRaw("LOWER(TRIM(estado)) = 'activo'")
+            ->orderBy('hora_inicio')
+            ->orderBy('dia')
+            ->get();
+
+        // Obtener asignaciones actuales
+        $asignaciones = DB::table('grupo_horario')
+            ->where('Id_grupo', $id)
+            ->get()
+            ->keyBy('Id_horario');
+
+        // Formatear los bloques de hora únicos
+        $bloques = [];
+        foreach ($horarios as $h) {
+            $key = substr($h->hora_inicio, 0, 5) . ' - ' . substr($h->hora_fin, 0, 5);
+            if (!isset($bloques[$key])) {
+                $bloques[$key] = [
+                    'hora_inicio' => $h->hora_inicio,
+                    'hora_fin' => $h->hora_fin,
+                    'dias' => []
+                ];
+            }
+            // Guardamos el ID del horario asociado a este día y bloque
+            $bloques[$key]['dias'][$h->dia] = $h->id_horario;
+        }
+
+        return view('Gestion_Academica.asignarHorariosGrupo', compact('grupo', 'materias', 'bloques', 'asignaciones'));
+    }
+
+    public function horarioStore(Request $request, $id)
+    {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
+        $grupo = DB::table('grupo')->where('Id_grupo', $id)->first();
+        if (!$grupo) {
+            return back()->withErrors(['error' => 'Grupo no encontrado.']);
+        }
+
+        DB::beginTransaction();
+        try {
+            // Eliminar asignaciones anteriores
+            DB::table('grupo_horario')->where('Id_grupo', $id)->delete();
+
+            // Guardar las nuevas asignaciones
+            if ($request->has('horario_materia')) {
+                foreach ($request->horario_materia as $horarioId => $materiaId) {
+                    if (!empty($materiaId)) {
+                        DB::table('grupo_horario')->insert([
+                            'Id_grupo' => $id,
+                            'Id_horario' => $horarioId,
+                            'Id_materia' => $materiaId
+                        ]);
+                    }
+                }
+            }
+
+            $this->registrarBitacora(
+                'Gestion Academica',
+                'Configuró el horario para el grupo ' . $grupo->sigla_grupo . '.'
+            );
+
+            DB::commit();
+            return redirect()->route('grupos.horario', $id)
+                ->with('success', 'Horario del grupo guardado correctamente.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Error al guardar el horario: ' . $e->getMessage()]);
+        }
+    }
+
+    public function horarioImprimir($id)
+    {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
+        $grupo = DB::table('grupo as g')
+            ->join('aula as a', 'a.Id_aula', '=', 'g.Id_aula')
+            ->join('modalidad as m', 'm.Id_modalidad', '=', 'g.Id_modalidad')
+            ->join('turno as t', 't.Id_turno', '=', 'g.Id_turno')
+            ->join('gestion as ge', 'ge.Id_gestion', '=', 'g.Id_gestion')
+            ->select(
+                'g.Id_grupo as id_grupo',
+                'g.sigla_grupo',
+                'g.Id_turno as id_turno',
+                't.nombre as nombre_turno',
+                'a.nro_aula',
+                'a.capacidad',
+                'a.ubicacion',
+                'm.nombre_modalidad',
+                'ge.anio',
+                'ge.periodo'
+            )
+            ->where('g.Id_grupo', $id)
+            ->first();
+
+        if (!$grupo) {
+            return redirect()->route('grupos.index')->withErrors(['error' => 'Grupo no encontrado.']);
+        }
+
+        // Obtener asignaciones de materias y horarios para este grupo
+        $horarios = DB::table('grupo_horario as gh')
+            ->join('horario as h', 'h.Id_horario', '=', 'gh.Id_horario')
+            ->join('materia as m', 'm.Id_materia', '=', 'gh.Id_materia')
+            ->select(
+                'h.dia',
+                'h.hora_inicio',
+                'h.hora_fin',
+                'm.nombre as nombre_materia',
+                'm.descripcion as desc_materia'
+            )
+            ->where('gh.Id_grupo', $id)
+            ->whereRaw("LOWER(TRIM(h.estado)) = 'activo'")
+            ->orderBy('h.hora_inicio')
+            ->get();
+
+        // Agrupar por día para que el ticket sea idéntico al del usuario
+        $diasList = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        $scheduleByDay = [];
+        foreach ($diasList as $dia) {
+            $scheduleByDay[$dia] = [];
+        }
+
+        foreach ($horarios as $h) {
+            $diaNorm = trim($h->dia);
+            if (isset($scheduleByDay[$diaNorm])) {
+                $scheduleByDay[$diaNorm][] = [
+                    'materia' => $h->nombre_materia,
+                    'rango' => substr($h->hora_inicio, 0, 5) . '-' . substr($h->hora_fin, 0, 5),
+                    'aula' => $grupo->nro_aula
+                ];
+            }
+        }
+
+        return view('Gestion_Academica.imprimirHorarioGrupo', compact('grupo', 'scheduleByDay'));
+    }
+
     private function registrarBitacora(string $tipo, string $descripcion): void
     {
         if (!Auth::check()) {
@@ -264,5 +727,85 @@ class gestionarGruposController extends Controller
             'estado' => 'activo',
             'Id_usuario' => Auth::id(),
         ]);
+    }
+
+    private function validarPrerrequisitos()
+    {
+        if (DB::table('gestion')->count() === 0 || DB::table('aula')->count() === 0 || DB::table('modalidad')->count() === 0 || DB::table('turno')->count() === 0) {
+            return redirect()->route('menu')->withErrors([
+                'error' => 'Debe registrar al menos una gestión, aula, modalidad y turno antes de acceder a la gestión de grupos.'
+            ]);
+        }
+        return null;
+    }
+
+    private function actualizarEstadosPostulantes($idGestion)
+    {
+        if (!$idGestion) {
+            return;
+        }
+
+        // Obtener inscripciones de la gestión
+        $inscripciones = DB::table('inscripcion')
+            ->where('Id_gestion', $idGestion)
+            ->get();
+
+        // Contar documentos destinados a Postulantes
+        $totalDocumentos = DB::table('documento')
+            ->whereRaw("LOWER(TRIM(destinado_a)) = 'postulantes'")
+            ->count();
+
+        // Contar conceptos de pago activos
+        $totalPagosActivos = DB::table('pago')
+            ->whereRaw("LOWER(TRIM(estado_pago)) = 'activo'")
+            ->count();
+
+        foreach ($inscripciones as $ins) {
+            $idPostulante = $ins->Id_postulante;
+            $codigoInscripcion = $ins->Codigo_inscripcion;
+
+            // Contar documentos aprobados del postulante
+            $documentosAprobados = DB::table('persona_documento as pd')
+                ->join('documento as doc', DB::raw('"doc"."Id_documento"'), '=', DB::raw('"pd"."Id_documento"'))
+                ->where('pd.Id_persona', $idPostulante)
+                ->whereRaw("LOWER(TRIM(doc.destinado_a)) = 'postulantes'")
+                ->where('pd.estado', 'Aprobado')
+                ->count();
+
+            // Contar pagos liquidados de esa inscripción
+            $pagosLiquidados = DB::table('pago_inscripcion as pi')
+                ->join('pago as pg', DB::raw('"pg"."Id_pago"'), '=', DB::raw('"pi"."Id_pago"'))
+                ->where('pi.Codigo_inscripcion', $codigoInscripcion)
+                ->whereRaw("LOWER(TRIM(pg.estado_pago)) = 'activo'")
+                ->where('pi.estado_pago_inscripcion', 'Liquidado')
+                ->count();
+
+            $esValido = (
+                $totalDocumentos > 0 &&
+                $documentosAprobados == $totalDocumentos &&
+                $totalPagosActivos > 0 &&
+                $pagosLiquidados == $totalPagosActivos
+            );
+
+            if ($esValido) {
+                DB::table('inscripcion')
+                    ->where('Codigo_inscripcion', $codigoInscripcion)
+                    ->update(['estado' => 'Inscrito']);
+
+                DB::table('postulante')
+                    ->where('Id_postulante', $idPostulante)
+                    ->update(['estado_inscripcion' => 'Inscrito']);
+            } else {
+                if ($ins->estado === 'Inscrito') {
+                    DB::table('inscripcion')
+                        ->where('Codigo_inscripcion', $codigoInscripcion)
+                        ->update(['estado' => 'En_Revision']);
+
+                    DB::table('postulante')
+                        ->where('Id_postulante', $idPostulante)
+                        ->update(['estado_inscripcion' => 'En_Revision']);
+                }
+            }
+        }
     }
 }

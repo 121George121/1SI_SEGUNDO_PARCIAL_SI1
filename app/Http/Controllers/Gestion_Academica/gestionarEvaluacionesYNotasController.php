@@ -11,6 +11,10 @@ class gestionarEvaluacionesYNotasController extends Controller
 {
     public function index(Request $request)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $evaluaciones = DB::table('evaluacion as e')
             ->join('grupo as g', DB::raw('"g"."Id_grupo"'), '=', DB::raw('"e"."Id_grupo"'))
             ->join('materia as m', DB::raw('"m"."Id_materia"'), '=', DB::raw('"e"."Id_materia"'))
@@ -133,6 +137,10 @@ class gestionarEvaluacionesYNotasController extends Controller
 
     public function storeEvaluacion(Request $request)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->validate([
             'Id_grupo' => 'required|exists:grupo,Id_grupo',
             'Id_materia' => 'required|exists:materia,Id_materia',
@@ -182,6 +190,10 @@ class gestionarEvaluacionesYNotasController extends Controller
 
     public function updateEvaluacion(Request $request, $id)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->validate([
             'Id_grupo' => 'required|exists:grupo,Id_grupo',
             'Id_materia' => 'required|exists:materia,Id_materia',
@@ -234,6 +246,10 @@ class gestionarEvaluacionesYNotasController extends Controller
 
     public function destroyEvaluacion($id)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         DB::table('evaluacion')
             ->where('Id_evaluacion', $id)
             ->delete();
@@ -246,6 +262,10 @@ class gestionarEvaluacionesYNotasController extends Controller
 
     public function storeNota(Request $request)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->validate([
             'Id_evaluacion' => 'required|exists:evaluacion,Id_evaluacion',
             'Id_postulante' => 'required|exists:postulante,Id_postulante',
@@ -302,6 +322,10 @@ class gestionarEvaluacionesYNotasController extends Controller
 
     public function updateNota(Request $request, $id)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->validate([
             'Id_evaluacion' => 'required|exists:evaluacion,Id_evaluacion',
             'Id_postulante' => 'required|exists:postulante,Id_postulante',
@@ -360,6 +384,10 @@ class gestionarEvaluacionesYNotasController extends Controller
 
     public function destroyNota($id)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         DB::table('nota')
             ->where('Id_nota', $id)
             ->delete();
@@ -372,6 +400,10 @@ class gestionarEvaluacionesYNotasController extends Controller
 
     public function guardarNotasLote(Request $request)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->validate([
             'Id_evaluacion' => 'required|exists:evaluacion,Id_evaluacion',
             'Id_grupo' => 'required|exists:grupo,Id_grupo',
@@ -434,5 +466,15 @@ class gestionarEvaluacionesYNotasController extends Controller
             'estado' => 'activo',
             'Id_usuario' => Auth::id(),
         ]);
+    }
+
+    private function validarPrerrequisitos()
+    {
+        if (DB::table('grupo')->count() === 0) {
+            return redirect()->route('menu')->withErrors([
+                'error' => 'Debe registrar al menos un grupo antes de gestionar evaluaciones y notas.'
+            ]);
+        }
+        return null;
     }
 }

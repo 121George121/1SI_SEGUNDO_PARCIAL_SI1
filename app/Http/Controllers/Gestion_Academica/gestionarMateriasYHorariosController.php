@@ -80,40 +80,73 @@ class gestionarMateriasYHorariosController extends Controller
 
     public function indexHorarios()
     {
-        $horarios = DB::table('horario')
+        $horarios = DB::table('horario as h')
+            ->leftJoin('turno as t', 't.Id_turno', '=', 'h.Id_turno')
             ->select(
-                DB::raw('"Id_horario" as id_horario'),
-                'dia',
-                'hora_inicio',
-                'hora_fin',
-                'estado'
+                'h.Id_horario as id_horario',
+                'h.dia',
+                'h.hora_inicio',
+                'h.hora_fin',
+                'h.estado',
+                'h.Id_turno as id_turno',
+                't.nombre as nombre_turno'
             )
-            ->orderBy(DB::raw('"Id_horario"'), 'desc')
+            ->orderBy('h.Id_horario', 'desc')
             ->get();
 
-        return view('Gestion_Academica.gestionarHorarios', compact('horarios'));
+        $turnos = DB::table('turno')
+            ->select('Id_turno as id_turno', 'nombre')
+            ->whereRaw("LOWER(TRIM(estado)) = 'activo'")
+            ->orderBy('nombre')
+            ->get();
+
+        return view('Gestion_Academica.gestionarHorarios', compact('horarios', 'turnos'));
     }
 
     public function storeHorario(Request $request)
     {
         $request->validate([
-            'dia' => 'required|string|max:20',
+            'dias' => 'required|array',
+            'dias.*' => 'required|string|max:20',
             'hora_inicio' => 'required',
             'hora_fin' => 'required|after:hora_inicio',
             'estado' => 'required|in:activo,inactivo',
+            'Id_turno' => 'required|exists:turno,Id_turno',
         ]);
 
-        DB::table('horario')->insert([
-            'dia' => $request->dia,
-            'hora_inicio' => $request->hora_inicio,
-            'hora_fin' => $request->hora_fin,
-            'estado' => $request->estado,
-        ]);
+        DB::beginTransaction();
+        try {
+            foreach ($request->dias as $dia) {
+                // Check duplicate
+                $exists = DB::table('horario')
+                    ->where('dia', $dia)
+                    ->where('hora_inicio', $request->hora_inicio)
+                    ->where('hora_fin', $request->hora_fin)
+                    ->where('Id_turno', $request->Id_turno)
+                    ->exists();
 
-        $this->registrarBitacora('Registró horario: '.$request->dia);
+                if (!$exists) {
+                    DB::table('horario')->insert([
+                        'dia' => $dia,
+                        'hora_inicio' => $request->hora_inicio,
+                        'hora_fin' => $request->hora_fin,
+                        'estado' => $request->estado,
+                        'Id_turno' => $request->Id_turno,
+                    ]);
+                }
+            }
 
-        return redirect()->route('horarios.index')
-            ->with('success', 'Horario registrado correctamente.');
+            $turno = DB::table('turno')->where('Id_turno', $request->Id_turno)->value('nombre');
+            $this->registrarBitacora('Registró horarios para turno: ' . $turno . ' (' . implode(', ', $request->dias) . ')');
+
+            DB::commit();
+            return redirect()->route('horarios.index')
+                ->with('success', 'Horario(s) registrado(s) correctamente.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Error al registrar horarios: ' . $e->getMessage()])->withInput();
+        }
     }
 
     public function updateHorario(Request $request, $id)
@@ -123,6 +156,7 @@ class gestionarMateriasYHorariosController extends Controller
             'hora_inicio' => 'required',
             'hora_fin' => 'required|after:hora_inicio',
             'estado' => 'required|in:activo,inactivo',
+            'Id_turno' => 'required|exists:turno,Id_turno',
         ]);
 
         DB::table('horario')
@@ -132,6 +166,7 @@ class gestionarMateriasYHorariosController extends Controller
                 'hora_inicio' => $request->hora_inicio,
                 'hora_fin' => $request->hora_fin,
                 'estado' => $request->estado,
+                'Id_turno' => $request->Id_turno,
             ]);
 
         $this->registrarBitacora('Actualizó horario ID '.$id);

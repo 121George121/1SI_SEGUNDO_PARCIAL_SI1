@@ -11,6 +11,10 @@ class gestionarPostulantesAGruposController extends Controller
 {
     public function index()
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         // 1. Obtener la lista de postulantes inscritos y validados (estado = 'Inscrito') que no estén en ningún grupo
         $postulantesSinGrupo = DB::table('postulante as po')
             ->join('persona as p', DB::raw('"p"."Id_persona"'), '=', DB::raw('"po"."Id_postulante"'))
@@ -95,6 +99,10 @@ class gestionarPostulantesAGruposController extends Controller
 
     public function store(Request $request)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->validate([
             'Id_grupo' => 'required|integer|exists:grupo,Id_grupo',
             'Id_postulante' => 'required|integer|exists:postulante,Id_postulante',
@@ -173,6 +181,10 @@ class gestionarPostulantesAGruposController extends Controller
 
     public function destroy($idGrupo, $idPostulante)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $asignacion = DB::table('grupo_postulante')
             ->where('Id_grupo', $idGrupo)
             ->where('Id_postulante', $idPostulante)
@@ -222,6 +234,10 @@ class gestionarPostulantesAGruposController extends Controller
 
     public function asignacionGeneral()
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         // 1. Obtener todos los postulantes inscritos/validados que no tengan grupo
         $postulantes = DB::table('postulante as po')
             ->join('inscripcion as i', DB::raw('"i"."Id_postulante"'), '=', DB::raw('"po"."Id_postulante"'))
@@ -324,5 +340,15 @@ class gestionarPostulantesAGruposController extends Controller
             'estado' => 'activo',
             'Id_usuario' => Auth::id(),
         ]);
+    }
+
+    private function validarPrerrequisitos()
+    {
+        if (DB::table('grupo')->count() === 0 || DB::table('postulante')->count() === 0) {
+            return redirect()->route('menu')->withErrors([
+                'error' => 'Debe registrar al menos un grupo y un postulante antes de realizar asignaciones.'
+            ]);
+        }
+        return null;
     }
 }

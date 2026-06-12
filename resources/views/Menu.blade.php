@@ -124,6 +124,18 @@ main p { font-size:18px; color:#333; margin-bottom:24px; }
 </aside>
 
 <main>
+    @if(session('success'))
+        <div style="margin-bottom: 20px; padding: 14px; background: #d1fae5; color: #065f46; border-radius: 8px; font-weight: bold; border-left: 5px solid #10b981;">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div style="margin-bottom: 20px; padding: 14px; background: #fee2fee2; background-color: #fee2e2; color: #991b1b; border-radius: 8px; font-weight: bold; border-left: 5px solid #ef4444;">
+            {{ $errors->first() }}
+        </div>
+    @endif
+
     <h1>Bienvenido {{ Auth::user()->persona ? Auth::user()->persona->nombre . ' ' . Auth::user()->persona->apellido : Auth::user()->nombre_usuario }}</h1>
     <p>Sistema de Inscripción al CUP Preuniversitario</p>
 

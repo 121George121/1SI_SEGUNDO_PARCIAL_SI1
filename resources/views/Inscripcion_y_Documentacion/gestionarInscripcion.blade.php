@@ -308,6 +308,26 @@
                 </div>
             </div>
 
+            <div class="form-group">
+                <label>Modalidad de Preferencia</label>
+                <select name="Id_modalidad_preferencia" id="id_modalidad_preferencia" required>
+                    <option value="">Seleccione Modalidad</option>
+                    @foreach($modalidades as $mod)
+                        <option value="{{ $mod->id_modalidad }}">{{ $mod->nombre_modalidad }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Turno de Preferencia</label>
+                <select name="Id_turno_preferencia" id="id_turno_preferencia" required>
+                    <option value="">Seleccione Turno</option>
+                    @foreach($turnos as $tur)
+                        <option value="{{ $tur->id_turno }}">{{ $tur->nombre }}</option>
+                    @endforeach
+                </select>
+            </div>
+
             <div class="form-group full">
                 <button type="submit" class="btn-primary">Registrar Inscripción</button>
             </div>
@@ -340,6 +360,7 @@
                     <th>Carrera Principal</th>
                     <th>Carrera Secundaria</th>
                     <th>Gestión</th>
+                    <th>Preferencia</th>
                     <th>Fecha</th>
                     <th>Estado</th>
                     <th>Acciones</th>
@@ -361,6 +382,13 @@
                                 Sin gestión
                             @endif
                         </td>
+                        <td>
+                            @if($item->modalidad_preferencia)
+                                {{ $item->modalidad_preferencia }} ({{ $item->turno_preferencia }})
+                            @else
+                                <span style="color: #999;">Sin preferencia</span>
+                            @endif
+                        </td>
                         <td>{{ $item->fecha_inscripcion }}</td>
                         <td>{{ ucfirst($item->estado_inscripcion) }}</td>
                         <td>
@@ -368,6 +396,7 @@
                                 <a href="{{ route('inscripcion.documentos.form', $item->codigo_inscripcion) }}" class="btn-success">
                                     Validar Documentos
                                 </a>
+
                                 <details>
                                     <summary>Editar Inscripción</summary>
 
@@ -417,6 +446,24 @@
                                             @foreach($gestiones as $gestion)
                                                 <option value="{{ $gestion->id_gestion }}" {{ $item->id_gestion == $gestion->id_gestion ? 'selected' : '' }}>
                                                     {{ $gestion->anio }} - {{ $gestion->periodo }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+
+                                        <select name="Id_modalidad_preferencia" required>
+                                            <option value="">Modalidad Pref.</option>
+                                            @foreach($modalidades as $mod)
+                                                <option value="{{ $mod->id_modalidad }}" {{ $item->id_modalidad_preferencia == $mod->id_modalidad ? 'selected' : '' }}>
+                                                    {{ $mod->nombre_modalidad }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+
+                                        <select name="Id_turno_preferencia" required>
+                                            <option value="">Turno Pref.</option>
+                                            @foreach($turnos as $tur)
+                                                <option value="{{ $tur->id_turno }}" {{ $item->id_turno_preferencia == $tur->id_turno ? 'selected' : '' }}>
+                                                    {{ $tur->nombre }}
                                                 </option>
                                             @endforeach
                                         </select>

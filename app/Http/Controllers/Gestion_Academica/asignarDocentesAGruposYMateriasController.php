@@ -11,6 +11,10 @@ class asignarDocentesAGruposYMateriasController extends Controller
 {
     public function index()
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $asignaciones = DB::table('grupo_materia as gm')
             ->join('grupo as g', DB::raw('"g"."Id_grupo"'), '=', DB::raw('"gm"."Id_grupo"'))
             ->join('materia as m', DB::raw('"m"."Id_materia"'), '=', DB::raw('"gm"."Id_materia"'))
@@ -74,6 +78,10 @@ class asignarDocentesAGruposYMateriasController extends Controller
 
     public function store(Request $request)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->validate([
             'Id_grupo' => 'required|exists:grupo,Id_grupo',
             'Id_materia' => 'required|exists:materia,Id_materia',
@@ -105,6 +113,10 @@ class asignarDocentesAGruposYMateriasController extends Controller
 
     public function update(Request $request, $idGrupo, $idMateria)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->validate([
             'Id_grupo' => 'required|exists:grupo,Id_grupo',
             'Id_materia' => 'required|exists:materia,Id_materia',
@@ -144,6 +156,10 @@ class asignarDocentesAGruposYMateriasController extends Controller
 
     public function destroy($idGrupo, $idMateria)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         DB::table('grupo_materia')
             ->where('Id_grupo', $idGrupo)
             ->where('Id_materia', $idMateria)
@@ -169,5 +185,15 @@ class asignarDocentesAGruposYMateriasController extends Controller
             'estado' => 'activo',
             'Id_usuario' => Auth::id(),
         ]);
+    }
+
+    private function validarPrerrequisitos()
+    {
+        if (DB::table('grupo')->count() === 0 || DB::table('materia')->count() === 0 || DB::table('docente')->count() === 0) {
+            return redirect()->route('menu')->withErrors([
+                'error' => 'Debe registrar al menos un grupo, una materia y un docente antes de gestionar asignaciones de docentes.'
+            ]);
+        }
+        return null;
     }
 }

@@ -77,6 +77,14 @@
         background: #dc2626;
     }
 
+    .menu-modulo .deshabilitado {
+        background: rgba(120, 120, 120, 0.2) !important;
+        color: #9ca3af !important;
+        cursor: not-allowed !important;
+        pointer-events: none !important;
+        opacity: 0.6;
+    }
+
     .logout {
         margin-top: auto;
         padding: 16px;
@@ -213,6 +221,11 @@
                 Volver al Dashboard
             </div>
 
+            @php
+                $hasGestiones = \Illuminate\Support\Facades\DB::table('gestion')->exists();
+                $disableReportes = !$hasGestiones;
+            @endphp
+
             <div onclick="window.location='{{ route('aulas.index') }}'"
                 class="{{ request()->routeIs('aulas.*') ? 'activo' : '' }}" style="cursor:pointer;">
                 CU08 - Gestionar Aulas
@@ -222,9 +235,10 @@
                 style="cursor:pointer;">
                 CU09 - Gestionar Docentes
             </div>
-            <div onclick="window.location='{{ route('reportes.index') }}'"
-                class="{{ request()->routeIs('reportes.*') ? 'activo' : '' }}"
-                style="cursor:pointer;">
+            <div onclick="{{ $disableReportes ? '' : "window.location='" . route('reportes.index') . "'" }}"
+                class="{{ request()->routeIs('reportes.*') ? 'activo' : '' }} {{ $disableReportes ? 'deshabilitado' : '' }}"
+                style="cursor:pointer;"
+                title="{{ $disableReportes ? 'Requiere registrar previamente: Gestiones.' : '' }}">
                 CU18 - Generar Reportes
             </div>
 

@@ -288,10 +288,13 @@
             </div>
         </div>
 
-        <div class="form-group full">
-            <button type="submit" class="btn-primary">
+        <div class="form-group full" style="display: flex; gap: 12px; align-items: center; margin-top: 10px;">
+            <button type="submit" class="btn-primary" style="flex: 1; margin: 0; padding: 12px 20px; border-radius: 8px;">
                 Registrar Grupo
             </button>
+            <a href="{{ route('grupos.autogenerar.view') }}" class="btn" style="flex: 1; background: #10b981; color: white; display: inline-flex; align-items: center; justify-content: center; height: 100%; min-height: 44px; text-decoration: none; font-weight: bold; border-radius: 8px; font-size: 14px; text-align: center; border: none; box-sizing: border-box; cursor: pointer; transition: all 0.2s ease;">
+                Creación Automática de Grupos
+            </a>
         </div>
     </form>
 </div>
@@ -406,6 +409,10 @@
                                         Eliminar
                                     </button>
                                 </form>
+
+                                <a href="{{ route('grupos.horario', $grupo->id_grupo) }}" class="btn-primary" style="background: #10b981; margin-top: 4px; text-align: center;">
+                                    Asignar Horario
+                                </a>
                             </div>
                         </td>
                     </tr>

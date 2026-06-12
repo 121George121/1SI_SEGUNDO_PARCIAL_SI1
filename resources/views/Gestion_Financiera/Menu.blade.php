@@ -75,6 +75,14 @@
         background: #dc2626;
     }
 
+    .menu-modulo a.deshabilitado {
+        background: rgba(120, 120, 120, 0.2) !important;
+        color: #9ca3af !important;
+        cursor: not-allowed !important;
+        pointer-events: none !important;
+        opacity: 0.6;
+    }
+
     .logout {
         margin-top: auto;
         padding: 16px;
@@ -275,8 +283,14 @@
                 Volver al Dashboard
             </a>
 
-            <a href="{{ route('pagos.index') }}"
-               class="{{ request()->routeIs('pagos.*') ? 'activo' : '' }}">
+            @php
+                $hasInscripciones = \Illuminate\Support\Facades\DB::table('inscripcion')->exists();
+                $disablePagos = !$hasInscripciones;
+            @endphp
+
+            <a href="{{ $disablePagos ? '#' : route('pagos.index') }}"
+               class="{{ request()->routeIs('pagos.*') ? 'activo' : '' }} {{ $disablePagos ? 'deshabilitado' : '' }}"
+               title="{{ $disablePagos ? 'Requiere registrar previamente: Inscripciones.' : '' }}">
                 CU05 - Gestionar Pagos
             </a>
         </nav>

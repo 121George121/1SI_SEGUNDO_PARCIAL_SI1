@@ -14,6 +14,10 @@ class gestionarAdmisionFinalController extends Controller
      */
     public function index(Request $request)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $gestiones = DB::table('gestion')
             ->select('Id_gestion', 'anio', 'periodo', 'estado')
             ->orderBy('anio', 'desc')
@@ -106,6 +110,10 @@ class gestionarAdmisionFinalController extends Controller
      */
     public function consolidar(Request $request)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->validate([
             'Id_gestion' => 'required|integer',
         ]);
@@ -239,6 +247,10 @@ class gestionarAdmisionFinalController extends Controller
      */
     public function notificar(Request $request)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->validate([
             'Id_gestion' => 'required|integer',
         ]);
@@ -314,5 +326,15 @@ class gestionarAdmisionFinalController extends Controller
         }
 
         return redirect()->route('admision.index', ['Id_gestion' => $idGestion])->with('success', "Notificaciones enviadas con éxito a {$enviados} postulantes.");
+    }
+
+    private function validarPrerrequisitos()
+    {
+        if (DB::table('gestion')->count() === 0) {
+            return redirect()->route('menu')->withErrors([
+                'error' => 'Debe registrar al menos una gestión antes de gestionar la admisión final.'
+            ]);
+        }
+        return null;
     }
 }

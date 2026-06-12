@@ -12,6 +12,10 @@ class gestionarInscripcionController extends Controller
 {
     public function index()
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $inscripciones = DB::table('inscripcion as i')
             ->join('postulante as po', DB::raw('"po"."Id_postulante"'), '=', DB::raw('"i"."Id_postulante"'))
             ->join('persona as p', DB::raw('"p"."Id_persona"'), '=', DB::raw('"po"."Id_postulante"'))
@@ -28,6 +32,10 @@ class gestionarInscripcionController extends Controller
                     ->where('ic2.prioridad', '=', 2);
             })
             ->leftJoin('carrera as c2', DB::raw('"c2"."Id_carrera"'), '=', DB::raw('"ic2"."Id_carrera"'))
+
+            ->leftJoin('preferencia_inscripcion as pi', DB::raw('"pi"."Codigo_inscripcion"'), '=', DB::raw('"i"."Codigo_inscripcion"'))
+            ->leftJoin('modalidad as m', DB::raw('"m"."Id_modalidad"'), '=', DB::raw('"pi"."Id_modalidad"'))
+            ->leftJoin('turno as t', DB::raw('"t"."Id_turno"'), '=', DB::raw('"pi"."Id_turno"'))
 
             ->select(
                 DB::raw('"i"."Codigo_inscripcion" as id_inscripcion'),
@@ -57,7 +65,12 @@ class gestionarInscripcionController extends Controller
 
                 DB::raw('"i"."Id_gestion" as id_gestion'),
                 'g.anio',
-                'g.periodo'
+                'g.periodo',
+                DB::raw('"pi"."Id_preferencia" as id_preferencia'),
+                DB::raw('"pi"."Id_modalidad" as id_modalidad_preferencia'),
+                DB::raw('"pi"."Id_turno" as id_turno_preferencia'),
+                'm.nombre_modalidad as modalidad_preferencia',
+                't.nombre as turno_preferencia'
             )
             ->orderBy(DB::raw('"i"."Codigo_inscripcion"'), 'desc')
             ->get();
@@ -83,10 +96,24 @@ class gestionarInscripcionController extends Controller
             ->orderBy('anio', 'desc')
             ->get();
 
+        $modalidades = DB::table('modalidad')
+            ->select(DB::raw('"Id_modalidad" as id_modalidad'), 'nombre_modalidad')
+            ->whereRaw("LOWER(TRIM(estado)) = 'activo'")
+            ->orderBy('nombre_modalidad')
+            ->get();
+
+        $turnos = DB::table('turno')
+            ->select(DB::raw('"Id_turno" as id_turno'), 'nombre')
+            ->whereRaw("LOWER(TRIM(estado)) = 'activo'")
+            ->orderBy('nombre')
+            ->get();
+
         return view('Inscripcion_y_Documentacion.gestionarInscripcion', compact(
             'inscripciones',
             'carreras',
-            'gestiones'
+            'gestiones',
+            'modalidades',
+            'turnos'
         ));
     }
 
@@ -118,6 +145,7 @@ class gestionarInscripcionController extends Controller
                 $join->on(DB::raw('"ic2"."Codigo_inscripcion"'), '=', DB::raw('"i"."Codigo_inscripcion"'))
                     ->where('ic2.prioridad', '=', 2);
             })
+            ->leftJoin('preferencia_inscripcion as pi', DB::raw('"pi"."Codigo_inscripcion"'), '=', DB::raw('"i"."Codigo_inscripcion"'))
             ->select(
                 DB::raw('"i"."Codigo_inscripcion" as Codigo_inscripcion'),
                 'i.estado',
@@ -125,7 +153,9 @@ class gestionarInscripcionController extends Controller
                 DB::raw('"i"."Id_postulante" as Id_postulante'),
                 DB::raw('"ic1"."Id_carrera" as Id_carrera_principal'),
                 DB::raw('"ic2"."Id_carrera" as Id_carrera_secundaria'),
-                DB::raw('"i"."Id_gestion" as Id_gestion')
+                DB::raw('"i"."Id_gestion" as Id_gestion'),
+                DB::raw('"pi"."Id_modalidad" as Id_modalidad_preferencia'),
+                DB::raw('"pi"."Id_turno" as Id_turno_preferencia')
             )
             ->where('i.Id_postulante', $idPersona)
             ->first();
@@ -151,6 +181,10 @@ class gestionarInscripcionController extends Controller
 
     public function store(Request $request)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->merge([
             'Id_carrera_principal' => $request->input('Id_carrera_principal') ?: $request->input('Id_carrera'),
         ]);
@@ -167,6 +201,8 @@ class gestionarInscripcionController extends Controller
             'Id_carrera_principal' => 'required|exists:carrera,Id_carrera',
             'Id_carrera_secundaria' => 'nullable|exists:carrera,Id_carrera|different:Id_carrera_principal',
             'Id_gestion' => 'required|exists:gestion,Id_gestion',
+            'Id_modalidad_preferencia' => 'required|exists:modalidad,Id_modalidad',
+            'Id_turno_preferencia' => 'required|exists:turno,Id_turno',
         ]);
 
         DB::beginTransaction();
@@ -311,6 +347,15 @@ class gestionarInscripcionController extends Controller
             
             $this->actualizarEstadoInscripcionPorDocumentosYPago($codigoInscripcion);
 
+            DB::table('preferencia_inscripcion')->updateOrInsert(
+                ['Codigo_inscripcion' => $codigoInscripcion],
+                [
+                    'Id_modalidad' => $request->input('Id_modalidad_preferencia'),
+                    'Id_turno' => $request->input('Id_turno_preferencia'),
+                    'estado' => 'activo'
+                ]
+            );
+
             $this->registrarBitacora(
                 'Inscripcion',
                 'Registró o actualizó inscripción del postulante ID ' . $idPersona . '. Usuario creado/actualizado con correo.'
@@ -332,6 +377,10 @@ class gestionarInscripcionController extends Controller
 
     public function update(Request $request, $id)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->merge([
             'Id_carrera_principal' => $request->input('Id_carrera_principal') ?: $request->input('Id_carrera'),
         ]);
@@ -349,6 +398,8 @@ class gestionarInscripcionController extends Controller
             'Id_carrera_secundaria' => 'nullable|exists:carrera,Id_carrera|different:Id_carrera_principal',
             'estado' => 'required|string|max:30',
             'Id_gestion' => 'required|exists:gestion,Id_gestion',
+            'Id_modalidad_preferencia' => 'required|exists:modalidad,Id_modalidad',
+            'Id_turno_preferencia' => 'required|exists:turno,Id_turno',
         ]);
 
         DB::beginTransaction();
@@ -406,6 +457,15 @@ class gestionarInscripcionController extends Controller
                 ]);
             }
 
+            DB::table('preferencia_inscripcion')->updateOrInsert(
+                ['Codigo_inscripcion' => $id],
+                [
+                    'Id_modalidad' => $request->input('Id_modalidad_preferencia'),
+                    'Id_turno' => $request->input('Id_turno_preferencia'),
+                    'estado' => 'activo'
+                ]
+            );
+
             $this->registrarBitacora(
                 'Inscripcion',
                 'Modificó inscripción código ' . $id . '.'
@@ -427,6 +487,10 @@ class gestionarInscripcionController extends Controller
 
     public function destroy($id)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         DB::beginTransaction();
 
         try {
@@ -536,6 +600,10 @@ class gestionarInscripcionController extends Controller
 
     public function documentos($codigo)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $inscripcion = DB::table('inscripcion as i')
             ->join('postulante as po', DB::raw('"po"."Id_postulante"'), '=', DB::raw('"i"."Id_postulante"'))
             ->join('persona as p', DB::raw('"p"."Id_persona"'), '=', DB::raw('"po"."Id_postulante"'))
@@ -605,6 +673,10 @@ class gestionarInscripcionController extends Controller
 
     public function guardarDocumentos(Request $request, $codigo)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->validate([
             'estado_documento' => 'required|array',
             'estado_documento.*' => 'required|in:Aprobado,Presentado,Rechazado,No presentado',
@@ -848,7 +920,8 @@ class gestionarInscripcionController extends Controller
                     $titulo,
                     $mensaje,
                     'inscripción confirmada',
-                    $nombreCompleto
+                    $nombreCompleto,
+                    false
                 );
             }
         } catch (\Throwable $e) {
@@ -869,5 +942,15 @@ class gestionarInscripcionController extends Controller
                 'Id_usuario' => Auth::id(),
             ]);
         }
+    }
+
+    private function validarPrerrequisitos()
+    {
+        if (DB::table('gestion')->count() === 0 || DB::table('carrera')->count() === 0 || DB::table('modalidad')->count() === 0 || DB::table('turno')->count() === 0) {
+            return redirect()->route('menu')->withErrors([
+                'error' => 'Debe registrar al menos una gestión, carrera, modalidad y turno antes de gestionar inscripciones.'
+            ]);
+        }
+        return null;
     }
 }

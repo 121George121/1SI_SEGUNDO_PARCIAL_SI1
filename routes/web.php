@@ -19,6 +19,7 @@ use App\Http\Controllers\Gestion_Academica\asignarDocentesAGruposYMateriasContro
 use App\Http\Controllers\Gestion_Academica\gestionarEvaluacionesYNotasController;
 use App\Http\Controllers\Gestion_Academica\gestionarPostulantesAGruposController;
 use App\Http\Controllers\Gestion_Academica\gestionarAdmisionFinalController;
+use App\Http\Controllers\Inscripcion_y_Documentacion\gestionarPreferenciaController;
 
 
 Route::get('/', function () {
@@ -118,6 +119,10 @@ Route::middleware('auth')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/grupos', [gestionarGruposController::class, 'index'])
         ->name('grupos.index');
+    Route::get('/grupos/autogenerar', [gestionarGruposController::class, 'autogenerarView'])
+        ->name('grupos.autogenerar.view');
+    Route::post('/grupos/autogenerar', [gestionarGruposController::class, 'autogenerarStore'])
+        ->name('grupos.autogenerar.store');
     Route::post('/grupos', [gestionarGruposController::class, 'store'])
         ->name('grupos.store');
     Route::put('/grupos/{id}', [gestionarGruposController::class, 'update'])
@@ -186,6 +191,10 @@ Route::middleware('auth')->group(function () {
     ->name('inscripcion.documentos.form');
     Route::post('/inscripcion/{codigo}/documentos', [gestionarInscripcionController::class, 'guardarDocumentos'])
     ->name('inscripcion.documentos.guardar');
+
+    // CU07 - Gestionar Preferencia
+    Route::post('/preferencias', [gestionarPreferenciaController::class, 'store'])->name('preferencias.store');
+    Route::delete('/preferencias/{id}', [gestionarPreferenciaController::class, 'destroy'])->name('preferencias.destroy');
 });
 
 Route::middleware('auth')->group(function () {
@@ -282,7 +291,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/postulantes-grupos/asignacion-general', [gestionarPostulantesAGruposController::class, 'asignacionGeneral'])
         ->name('postulantes-grupos.general');
 
-
+    // Horarios de Grupo (Asignación e Impresión)
+    Route::get('/grupos/{id}/horario', [gestionarGruposController::class, 'horarioView'])
+        ->name('grupos.horario');
+    Route::post('/grupos/{id}/horario', [gestionarGruposController::class, 'horarioStore'])
+        ->name('grupos.horario.store');
+    Route::get('/grupos/{id}/horario/imprimir', [gestionarGruposController::class, 'horarioImprimir'])
+        ->name('grupos.horario.imprimir');
 });
 
 Route::middleware('auth')->group(function () {

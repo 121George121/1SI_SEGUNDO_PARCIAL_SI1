@@ -16,6 +16,10 @@ class gestionarPagosController extends Controller
 {
     public function index()
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         // Obtener conceptos globales de pago (guardados en la tabla 'pago')
         $pagos = DB::table('pago')
             ->select(
@@ -92,6 +96,10 @@ class gestionarPagosController extends Controller
 
     public function generarPago(Request $request)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->validate([
             'concepto_pago' => 'required|string|max:100',
             'monto' => 'required|numeric|min:0.01',
@@ -114,6 +122,10 @@ class gestionarPagosController extends Controller
 
     public function update(Request $request, $id)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->validate([
             'concepto_pago' => 'required|string|max:100',
             'monto' => 'required|numeric|min:0.01',
@@ -138,6 +150,10 @@ class gestionarPagosController extends Controller
 
     public function destroy($id)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         DB::beginTransaction();
 
         try {
@@ -163,6 +179,10 @@ class gestionarPagosController extends Controller
 
     public function asignarPago(Request $request)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->validate([
             'Id_pago' => 'required|exists:pago,Id_pago',
             'Codigo_inscripcion' => 'nullable|exists:inscripcion,Codigo_inscripcion',
@@ -233,6 +253,10 @@ class gestionarPagosController extends Controller
 
     public function guardarPagoInscripcion(Request $request)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $request->validate([
             'Id_pago' => 'required|integer', 
             'Codigo_inscripcion' => 'required|integer',
@@ -334,6 +358,10 @@ class gestionarPagosController extends Controller
 
     public function pagarConPaypal(int $idPago, int $codigoInscripcion)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $pago = $this->buscarPagoInscripcion($idPago, $codigoInscripcion);
 
         if (!$pago) return redirect()->route('pagos.index')->withErrors(['error' => 'Pago no encontrado.']);
@@ -377,6 +405,10 @@ class gestionarPagosController extends Controller
 
     public function paypalSuccess(int $idPago, int $codigoInscripcion)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         DB::beginTransaction();
 
         try {
@@ -437,12 +469,20 @@ class gestionarPagosController extends Controller
 
     public function paypalCancel(int $idPago, int $codigoInscripcion)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $this->registrarBitacora('Canceló pago ID ' . $idPago . ' en PayPal');
         return redirect()->route('pagos.index')->withErrors(['error' => 'El pago con PayPal fue cancelado.']);
     }
 
     public function emitirComprobante(int $idComprobante)
     {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
         $comprobante = DB::table('comprobante')->where('Id_comprobante', $idComprobante)->first();
         if (!$comprobante || empty($comprobante->archivo)) return back()->withErrors(['error' => 'Comprobante no encontrado.']);
         $path = storage_path('app/comprobantes/' . $comprobante->archivo);
@@ -500,5 +540,15 @@ class gestionarPagosController extends Controller
             'estado' => 'activo',
             'Id_usuario' => Auth::id(),
         ]);
+    }
+
+    private function validarPrerrequisitos()
+    {
+        if (DB::table('inscripcion')->count() === 0) {
+            return redirect()->route('menu')->withErrors([
+                'error' => 'Debe registrar al menos una inscripción antes de gestionar pagos.'
+            ]);
+        }
+        return null;
     }
 }

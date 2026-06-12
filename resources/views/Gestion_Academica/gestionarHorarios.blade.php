@@ -160,16 +160,28 @@
     <form action="{{ route('horarios.store') }}" method="POST" class="form-grid">
         @csrf
 
+        <div class="form-group full">
+            <label>Días de la Semana</label>
+            <div style="display: flex; gap: 14px; flex-wrap: wrap; margin-top: 6px; padding: 12px; border: 1px solid #ccc; border-radius: 8px; background: #fafafa; align-items: center;">
+                @foreach(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'] as $d)
+                    <label style="display: flex; align-items: center; gap: 6px; font-weight: normal; color: #333; cursor: pointer; margin: 0;">
+                        <input type="checkbox" name="dias[]" value="{{ $d }}" class="dia-checkbox" style="width: auto; height: auto; cursor: pointer;" checked>
+                        {{ $d }}
+                    </label>
+                @endforeach
+                <button type="button" id="toggleTodosDias" class="btn-primary" style="padding: 6px 12px; font-size: 12px; margin-left: auto; background: #10b981; border-radius: 6px; line-height: 1;">
+                    Desmarcar Todos
+                </button>
+            </div>
+        </div>
+
         <div class="form-group">
-            <label>Día</label>
-            <select name="dia" required>
-                <option value="">Seleccione</option>
-                <option value="Lunes">Lunes</option>
-                <option value="Martes">Martes</option>
-                <option value="Miércoles">Miércoles</option>
-                <option value="Jueves">Jueves</option>
-                <option value="Viernes">Viernes</option>
-                <option value="Sábado">Sábado</option>
+            <label>Turno</label>
+            <select name="Id_turno" required>
+                <option value="">Seleccione Turno</option>
+                @foreach($turnos as $t)
+                    <option value="{{ $t->id_turno }}">{{ $t->nombre }}</option>
+                @endforeach
             </select>
         </div>
 
@@ -193,7 +205,7 @@
 
         <div class="form-group full">
             <button type="submit" class="btn-primary">
-                Registrar Horario
+                Registrar Horario(s)
             </button>
         </div>
     </form>
@@ -204,7 +216,7 @@
 
     <div style="margin-bottom:16px;">
         <label style="font-weight:bold;color:#0b2d6b;">Buscar Horario</label>
-        <input type="text" id="buscarHorario" placeholder="Buscar por día, hora o estado..."
+        <input type="text" id="buscarHorario" placeholder="Buscar por día, hora, turno o estado..."
                style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;margin-top:6px;">
     </div>
 
@@ -216,6 +228,7 @@
                     <th>Día</th>
                     <th>Hora Inicio</th>
                     <th>Hora Fin</th>
+                    <th>Turno</th>
                     <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
@@ -228,6 +241,7 @@
                         <td>{{ $horario->dia }}</td>
                         <td>{{ substr($horario->hora_inicio, 0, 5) }}</td>
                         <td>{{ substr($horario->hora_fin, 0, 5) }}</td>
+                        <td style="font-weight: bold; color: #0b2d6b;">{{ $horario->nombre_turno ?? 'Sin Turno' }}</td>
                         <td>
                             <span class="estado {{ strtolower(trim($horario->estado)) === 'activo' ? 'estado-ok' : 'estado-error' }}">
                                 {{ $horario->estado }}
@@ -238,29 +252,55 @@
                                 <details>
                                     <summary>Editar Horario</summary>
 
-                                    <form action="{{ route('horarios.update', $horario->id_horario) }}" method="POST" class="inline-form">
+                                    <form action="{{ route('horarios.update', $horario->id_horario) }}" method="POST" class="inline-form" style="grid-template-columns: repeat(2, 1fr);">
                                         @csrf
                                         @method('PUT')
 
-                                        <select name="dia" required>
-                                            @foreach(['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'] as $dia)
-                                                <option value="{{ $dia }}" {{ $horario->dia == $dia ? 'selected' : '' }}>
-                                                    {{ $dia }}
-                                                </option>
-                                            @endforeach
-                                        </select>
+                                        <div>
+                                            <label style="font-size: 12px; color: #0b2d6b; font-weight: bold; display: block; margin-bottom: 2px;">Día</label>
+                                            <select name="dia" required style="width: 100%;">
+                                                @foreach(['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'] as $dia)
+                                                    <option value="{{ $dia }}" {{ $horario->dia == $dia ? 'selected' : '' }}>
+                                                        {{ $dia }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
 
-                                        <select name="estado" required>
-                                            <option value="activo" {{ strtolower(trim($horario->estado)) === 'activo' ? 'selected' : '' }}>activo</option>
-                                            <option value="inactivo" {{ strtolower(trim($horario->estado)) === 'inactivo' ? 'selected' : '' }}>inactivo</option>
-                                        </select>
+                                        <div>
+                                            <label style="font-size: 12px; color: #0b2d6b; font-weight: bold; display: block; margin-bottom: 2px;">Turno</label>
+                                            <select name="Id_turno" required style="width: 100%;">
+                                                @foreach($turnos as $t)
+                                                    <option value="{{ $t->id_turno }}" {{ $horario->id_turno == $t->id_turno ? 'selected' : '' }}>
+                                                        {{ $t->nombre }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
 
-                                        <input type="time" name="hora_inicio" value="{{ substr($horario->hora_inicio, 0, 5) }}" required>
-                                        <input type="time" name="hora_fin" value="{{ substr($horario->hora_fin, 0, 5) }}" required>
+                                        <div>
+                                            <label style="font-size: 12px; color: #0b2d6b; font-weight: bold; display: block; margin-bottom: 2px;">Hora Inicio</label>
+                                            <input type="time" name="hora_inicio" value="{{ substr($horario->hora_inicio, 0, 5) }}" required style="width: 100%;">
+                                        </div>
 
-                                        <button type="submit" class="btn-warning">
-                                            Actualizar
-                                        </button>
+                                        <div>
+                                            <label style="font-size: 12px; color: #0b2d6b; font-weight: bold; display: block; margin-bottom: 2px;">Hora Fin</label>
+                                            <input type="time" name="hora_fin" value="{{ substr($horario->hora_fin, 0, 5) }}" required style="width: 100%;">
+                                        </div>
+
+                                        <div style="grid-column: span 2;">
+                                            <label style="font-size: 12px; color: #0b2d6b; font-weight: bold; display: block; margin-bottom: 2px;">Estado</label>
+                                            <select name="estado" required style="width: 100%;">
+                                                <option value="activo" {{ strtolower(trim($horario->estado)) === 'activo' ? 'selected' : '' }}>activo</option>
+                                                <option value="inactivo" {{ strtolower(trim($horario->estado)) === 'inactivo' ? 'selected' : '' }}>inactivo</option>
+                                            </select>
+                                        </div>
+
+                                        <div style="grid-column: span 2; margin-top: 6px;">
+                                            <button type="submit" class="btn-warning" style="width: 100%;">
+                                                Actualizar
+                                            </button>
+                                        </div>
                                     </form>
                                 </details>
 
@@ -270,7 +310,7 @@
                                     @csrf
                                     @method('DELETE')
 
-                                    <button type="submit" class="btn-danger">
+                                    <button type="submit" class="btn-danger" style="width: 100%;">
                                         Eliminar
                                     </button>
                                 </form>
@@ -279,7 +319,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" style="text-align:center;">No hay horarios registrados.</td>
+                        <td colspan="7" style="text-align:center;">No hay horarios registrados.</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -289,6 +329,16 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const toggleBtn = document.getElementById('toggleTodosDias');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', function () {
+            const checkboxes = document.querySelectorAll('.dia-checkbox');
+            const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+            checkboxes.forEach(cb => cb.checked = !allChecked);
+            toggleBtn.textContent = allChecked ? 'Marcar Todos' : 'Desmarcar Todos';
+        });
+    }
+
     const buscador = document.getElementById('buscarHorario');
     const tabla = document.getElementById('tablaHorarios');
 
