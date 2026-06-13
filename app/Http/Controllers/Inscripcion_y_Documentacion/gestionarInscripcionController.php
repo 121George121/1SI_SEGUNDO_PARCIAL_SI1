@@ -7,6 +7,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class gestionarInscripcionController extends Controller
 {
@@ -1024,5 +1027,463 @@ class gestionarInscripcionController extends Controller
             ]);
         }
         return null;
+    }
+
+    /**
+     * Download Excel template file for importing applicants with enrollment details
+     */
+    public function descargarPlantilla()
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Plantilla Inscripcion');
+
+        $headers = [
+            'ci', 'nombre', 'apellido', 'sexo', 'fecha_nacimiento', 
+            'telefono', 'correo_electronico', 'direccion', 
+            'carrera_principal', 'carrera_secundaria', 
+            'gestion_anio', 'gestion_periodo', 
+            'modalidad', 'turno'
+        ];
+
+        // Fill headers
+        foreach ($headers as $colIdx => $header) {
+            $sheet->setCellValue([$colIdx + 1, 1], $header);
+            // Auto size columns
+            $sheet->getColumnDimensionByColumn($colIdx + 1)->setAutoSize(true);
+        }
+
+        // Fill single sample row
+        $sampleData = [
+            '12345678', 'Juan', 'Perez', 'M', '2005-01-30', '70011223', 'juan.perez@example.com', 'Av. Bush S/N', 
+            'Ingeniería Informática', 'Ingeniería de Sistemas', '2026', 'I-2026', 'Presencial', 'Mañana'
+        ];
+        foreach ($sampleData as $colIdx => $val) {
+            $sheet->setCellValue([$colIdx + 1, 2], $val);
+        }
+
+        $fileName = 'plantilla_inscripcion_postulantes.xlsx';
+
+        // Prepare file download response directly
+        return response()->streamDownload(function() use ($spreadsheet) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save('php://output');
+        }, $fileName, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Cache-Control' => 'max-age=0',
+        ]);
+    }
+
+    /**
+     * Import multiple applicants and create enrollments directly from Excel
+     */
+    public function importarPostulantes(Request $request)
+    {
+        if ($redirect = $this->validarPrerrequisitos()) {
+            return $redirect;
+        }
+
+        $request->validate([
+            'excel_file' => ['required', 'file', 'mimes:xlsx,xls'],
+        ], [
+            'excel_file.required' => 'Debe seleccionar un archivo Excel.',
+            'excel_file.mimes' => 'El archivo debe ser de formato .xlsx o .xls.',
+        ]);
+
+        $file = $request->file('excel_file');
+
+        try {
+            $spreadsheet = IOFactory::load($file->getRealPath());
+            $worksheet = $spreadsheet->getActiveSheet();
+            $rows = $worksheet->toArray();
+        } catch (\Exception $e) {
+            return back()->withErrors(['excel_file' => 'Error al cargar el archivo Excel: ' . $e->getMessage()]);
+        }
+
+        if (count($rows) <= 1) {
+            return back()->withErrors(['excel_file' => 'El archivo Excel está vacío o no contiene datos.']);
+        }
+
+        $headers = array_map(function($val) {
+            return trim(strtolower($val));
+        }, $rows[0]);
+
+        $colMapping = [
+            'ci' => array_search('ci', $headers, true),
+            'nombre' => array_search('nombre', $headers, true),
+            'apellido' => array_search('apellido', $headers, true),
+            'sexo' => array_search('sexo', $headers, true),
+            'fecha_nacimiento' => array_search('fecha_nacimiento', $headers, true),
+            'telefono' => array_search('telefono', $headers, true),
+            'correo' => array_search('correo_electronico', $headers, true),
+            'direccion' => array_search('direccion', $headers, true),
+            'carrera_principal' => array_search('carrera_principal', $headers, true),
+            'carrera_secundaria' => array_search('carrera_secundaria', $headers, true),
+            'gestion_anio' => array_search('gestion_anio', $headers, true),
+            'gestion_periodo' => array_search('gestion_periodo', $headers, true),
+            'modalidad' => array_search('modalidad', $headers, true),
+            'turno' => array_search('turno', $headers, true),
+        ];
+
+        // Validate headers
+        $missingColumns = [];
+        foreach ($colMapping as $key => $index) {
+            if ($index === false && !in_array($key, ['telefono', 'direccion', 'carrera_secundaria'], true)) {
+                $missingColumns[] = $key;
+            }
+        }
+
+        if (!empty($missingColumns)) {
+            return back()->withErrors(['excel_file' => 'Faltan columnas requeridas en el Excel: ' . implode(', ', $missingColumns)]);
+        }
+
+        $importErrors = [];
+        $validatedData = [];
+
+        // Check for duplicates in file
+        $seenCi = [];
+        $seenCorreo = [];
+
+        for ($i = 1; $i < count($rows); $i++) {
+            $row = $rows[$i];
+
+            // Check if row is empty
+            $isEmptyRow = true;
+            foreach ($row as $cell) {
+                if ($cell !== null && trim($cell) !== '') {
+                    $isEmptyRow = false;
+                    break;
+                }
+            }
+            if ($isEmptyRow) {
+                continue;
+            }
+
+            $numFila = $i + 1;
+
+            $getVal = function($key) use ($row, $colMapping) {
+                $idx = $colMapping[$key];
+                return ($idx !== false && isset($row[$idx])) ? trim($row[$idx]) : null;
+            };
+
+            $ci = $getVal('ci');
+            $nombre = $getVal('nombre');
+            $apellido = $getVal('apellido');
+            $sexo = $getVal('sexo');
+            $fecha_nacimiento = $getVal('fecha_nacimiento');
+            $telefono = $getVal('telefono');
+            $correo = $getVal('correo');
+            $direccion = $getVal('direccion');
+            $carreraP_nombre = $getVal('carrera_principal');
+            $carreraS_nombre = $getVal('carrera_secundaria');
+            $gestion_anio = $getVal('gestion_anio');
+            $gestion_periodo = $getVal('gestion_periodo');
+            $modalidad_nombre = $getVal('modalidad');
+            $turno_nombre = $getVal('turno');
+
+            $rowErrors = [];
+
+            // 1. Required field validations
+            if (empty($ci)) $rowErrors[] = 'El campo "ci" es obligatorio.';
+            if (empty($nombre)) $rowErrors[] = 'El campo "nombre" es obligatorio.';
+            if (empty($apellido)) $rowErrors[] = 'El campo "apellido" es obligatorio.';
+            if (empty($fecha_nacimiento)) $rowErrors[] = 'El campo "fecha_nacimiento" es obligatorio.';
+            if (empty($correo)) $rowErrors[] = 'El campo "correo_electronico" es obligatorio.';
+            if (empty($carreraP_nombre)) $rowErrors[] = 'El campo "carrera_principal" es obligatorio.';
+            if (empty($gestion_anio) || empty($gestion_periodo)) $rowErrors[] = 'Los campos de gestión son obligatorios.';
+            if (empty($modalidad_nombre)) $rowErrors[] = 'El campo "modalidad" es obligatorio.';
+            if (empty($turno_nombre)) $rowErrors[] = 'El campo "turno" es obligatorio.';
+
+            // 2. Format validations
+            if (!empty($sexo) && !in_array(strtoupper($sexo), ['M', 'F'], true)) {
+                $rowErrors[] = 'El sexo debe ser "M" o "F".';
+            }
+            if (!empty($correo) && !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
+                $rowErrors[] = 'El correo electrónico no tiene un formato válido.';
+            }
+
+            // Parse Date
+            if (!empty($fecha_nacimiento)) {
+                if (is_numeric($fecha_nacimiento)) {
+                    try {
+                        $dateObj = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($fecha_nacimiento);
+                        $fecha_nacimiento = $dateObj->format('Y-m-d');
+                    } catch (\Exception $e) {
+                        $rowErrors[] = 'El formato de fecha_nacimiento es inválido.';
+                    }
+                } else {
+                    $timestamp = strtotime($fecha_nacimiento);
+                    if ($timestamp === false) {
+                        $rowErrors[] = 'El formato de fecha_nacimiento es inválido (debe ser YYYY-MM-DD).';
+                    } else {
+                        $fecha_nacimiento = date('Y-m-d', $timestamp);
+                    }
+                }
+            }
+
+            // DB Lookups
+            $carreraP = null;
+            if (!empty($carreraP_nombre)) {
+                $carreraP = DB::table('carrera')
+                    ->whereRaw("LOWER(TRIM(nombre_carrera)) = ?", [strtolower(trim($carreraP_nombre))])
+                    ->first();
+                if (!$carreraP) {
+                    $rowErrors[] = "La carrera '{$carreraP_nombre}' no existe.";
+                }
+            }
+
+            $carreraS = null;
+            if (!empty($carreraS_nombre)) {
+                $carreraS = DB::table('carrera')
+                    ->whereRaw("LOWER(TRIM(nombre_carrera)) = ?", [strtolower(trim($carreraS_nombre))])
+                    ->first();
+                if (!$carreraS) {
+                    $rowErrors[] = "La carrera secundaria '{$carreraS_nombre}' no existe.";
+                }
+            }
+
+            $gestion = null;
+            if (!empty($gestion_anio) && !empty($gestion_periodo)) {
+                $gestion = DB::table('gestion')
+                    ->where('anio', intval($gestion_anio))
+                    ->whereRaw("LOWER(TRIM(periodo)) = ?", [strtolower(trim($gestion_periodo))])
+                    ->first();
+                if (!$gestion) {
+                    $rowErrors[] = "La gestión {$gestion_anio} - {$gestion_periodo} no existe.";
+                }
+            }
+
+            $modalidad = null;
+            if (!empty($modalidad_nombre)) {
+                $modalidad = DB::table('modalidad')
+                    ->whereRaw("LOWER(TRIM(nombre_modalidad)) = ?", [strtolower(trim($modalidad_nombre))])
+                    ->first();
+                if (!$modalidad) {
+                    $rowErrors[] = "La modalidad '{$modalidad_nombre}' no existe.";
+                }
+            }
+
+            $turno = null;
+            if (!empty($turno_nombre)) {
+                $turno = DB::table('turno')
+                    ->whereRaw("LOWER(TRIM(nombre)) = ?", [strtolower(trim($turno_nombre))])
+                    ->first();
+                if (!$turno) {
+                    $rowErrors[] = "El turno '{$turno_nombre}' no existe.";
+                }
+            }
+
+            // 3. Duplicates check
+            if (!empty($ci)) {
+                if (isset($seenCi[$ci])) {
+                    $rowErrors[] = "El CI '{$ci}' está duplicado en el archivo (visto en fila " . $seenCi[$ci] . ").";
+                } else {
+                    $seenCi[$ci] = $numFila;
+                }
+            }
+            if (!empty($correo)) {
+                $correoLower = strtolower($correo);
+                if (isset($seenCorreo[$correoLower])) {
+                    $rowErrors[] = "El correo '{$correo}' está duplicado en el archivo (visto en fila " . $seenCorreo[$correoLower] . ").";
+                } else {
+                    $seenCorreo[$correoLower] = $numFila;
+                }
+            }
+
+            // DB unique check for new entries
+            if (empty($rowErrors)) {
+                // Determine if persona exists
+                $existPersona = DB::table('persona')->where('ci', $ci)->first();
+                $idPersonaExistente = $existPersona ? $existPersona->Id_persona : null;
+
+                $correoUsado = DB::table('persona')
+                    ->where('correo', $correo)
+                    ->when($idPersonaExistente, function($q) use ($idPersonaExistente) {
+                        $q->where('Id_persona', '!=', $idPersonaExistente);
+                    })
+                    ->exists() || DB::table('usuario')
+                    ->where('correo', $correo)
+                    ->when($idPersonaExistente, function($q) use ($idPersonaExistente) {
+                        $q->where('Id_persona', '!=', $idPersonaExistente);
+                    })
+                    ->exists();
+
+                if ($correoUsado) {
+                    $rowErrors[] = "El correo '{$correo}' ya está registrado en el sistema.";
+                }
+            }
+
+            if (!empty($rowErrors)) {
+                $importErrors[] = "Fila {$numFila}: " . implode(' ', $rowErrors);
+            } else {
+                $validatedData[] = [
+                    'ci' => $ci,
+                    'nombre' => $nombre,
+                    'apellido' => $apellido,
+                    'sexo' => $sexo ? strtoupper($sexo) : null,
+                    'fecha_nacimiento' => $fecha_nacimiento,
+                    'telefono' => $telefono,
+                    'correo' => $correo,
+                    'direccion' => $direccion,
+                    'carreraP_id' => $carreraP->Id_carrera,
+                    'carreraS_id' => $carreraS ? $carreraS->Id_carrera : null,
+                    'gestion_id' => $gestion->Id_gestion,
+                    'modalidad_id' => $modalidad->Id_modalidad,
+                    'turno_id' => $turno->Id_turno,
+                ];
+            }
+        }
+
+        if (!empty($importErrors)) {
+            return back()->with('import_errors', $importErrors);
+        }
+
+        DB::beginTransaction();
+        try {
+            foreach ($validatedData as $data) {
+                // 1. Crear o actualizar persona
+                $persona = DB::table('persona')->where('ci', $data['ci'])->first();
+
+                if ($persona) {
+                    $idPersona = $persona->Id_persona;
+                    DB::table('persona')->where('Id_persona', $idPersona)->update([
+                        'nombre' => $data['nombre'],
+                        'apellido' => $data['apellido'],
+                        'sexo' => $data['sexo'],
+                        'fecha_nacimiento' => $data['fecha_nacimiento'],
+                        'telefono' => $data['telefono'],
+                        'correo' => $data['correo'],
+                        'direccion' => $data['direccion'],
+                        'estado' => 'activo',
+                        'tipo_Postulante' => true,
+                    ]);
+                } else {
+                    $idPersona = DB::table('persona')->insertGetId([
+                        'ci' => $data['ci'],
+                        'nombre' => $data['nombre'],
+                        'apellido' => $data['apellido'],
+                        'sexo' => $data['sexo'],
+                        'fecha_nacimiento' => $data['fecha_nacimiento'],
+                        'telefono' => $data['telefono'],
+                        'correo' => $data['correo'],
+                        'direccion' => $data['direccion'],
+                        'estado' => 'activo',
+                        'tipo_Postulante' => true,
+                    ], 'Id_persona');
+                }
+
+                // 2. Crear o actualizar postulante
+                DB::table('postulante')->updateOrInsert(
+                    ['Id_postulante' => $idPersona],
+                    ['estado_inscripcion' => 'activo']
+                );
+
+                // 3. Crear o actualizar usuario
+                $usuario = DB::table('usuario')->where('Id_persona', $idPersona)->first();
+                if ($usuario) {
+                    DB::table('usuario')->where('Id_persona', $idPersona)->update([
+                        'nombre_usuario' => $data['correo'],
+                        'correo' => $data['correo'],
+                        'estado' => 'activo',
+                    ]);
+                } else {
+                    DB::table('usuario')->insert([
+                        'nombre_usuario' => $data['correo'],
+                        'correo' => $data['correo'],
+                        'contrasena' => Hash::make($data['ci']),
+                        'estado' => 'activo',
+                        'fecha_creacion' => now()->toDateString(),
+                        'Id_persona' => $idPersona,
+                    ]);
+                }
+
+                // 4. Crear o actualizar inscripción
+                $inscripcionExistente = DB::table('inscripcion')
+                    ->where('Id_postulante', $idPersona)
+                    ->first();
+
+                if ($inscripcionExistente) {
+                    $codigoInscripcion = $inscripcionExistente->Codigo_inscripcion;
+                    DB::table('inscripcion')->where('Codigo_inscripcion', $codigoInscripcion)->update([
+                        'estado' => 'En_Revision',
+                        'Id_gestion' => $data['gestion_id'],
+                    ]);
+                    DB::table('inscripcion_carrera')->where('Codigo_inscripcion', $codigoInscripcion)->delete();
+                } else {
+                    $codigoInscripcion = DB::table('inscripcion')->insertGetId([
+                        'estado' => 'En_Revision',
+                        'fecha_inscripcion' => now()->toDateString(),
+                        'Id_postulante' => $idPersona,
+                        'Id_gestion' => $data['gestion_id'],
+                    ], 'Codigo_inscripcion');
+                }
+
+                // 5. Carreras
+                DB::table('inscripcion_carrera')->insert([
+                    'Codigo_inscripcion' => $codigoInscripcion,
+                    'Id_carrera' => $data['carreraP_id'],
+                    'prioridad' => 1,
+                    'estado' => 'activo',
+                ]);
+
+                if ($data['carreraS_id']) {
+                    DB::table('inscripcion_carrera')->insert([
+                        'Codigo_inscripcion' => $codigoInscripcion,
+                        'Id_carrera' => $data['carreraS_id'],
+                        'prioridad' => 2,
+                        'estado' => 'activo',
+                    ]);
+                }
+
+                // 6. Pagos
+                $pagosActivos = DB::table('pago')
+                    ->whereRaw("LOWER(TRIM(estado_pago)) = 'activo'")
+                    ->get();
+
+                foreach ($pagosActivos as $p) {
+                    $existePagoInscripcion = DB::table('pago_inscripcion')
+                        ->where('Codigo_inscripcion', $codigoInscripcion)
+                        ->where('Id_pago', $p->Id_pago)
+                        ->exists();
+
+                    if (!$existePagoInscripcion) {
+                        DB::table('pago_inscripcion')->insert([
+                            'Id_pago' => $p->Id_pago,
+                            'Codigo_inscripcion' => $codigoInscripcion,
+                            'estado_pago_inscripcion' => 'Pendiente',
+                            'fecha_pago' => null,
+                            'Id_comprobante' => null,
+                        ]);
+                    }
+                }
+
+                // 7. Preferencia
+                DB::table('preferencia_inscripcion')->updateOrInsert(
+                    ['Codigo_inscripcion' => $codigoInscripcion],
+                    [
+                        'Id_modalidad' => $data['modalidad_id'],
+                        'Id_turno' => $data['turno_id'],
+                        'estado' => 'activo'
+                    ]
+                );
+
+                // 8. Actualizar Estado
+                $this->actualizarEstadoInscripcionPorDocumentosYPago($codigoInscripcion);
+
+                $this->registrarBitacora(
+                    'Inscripcion',
+                    'Inscripción de postulante CI ' . $data['ci'] . ' importada por Excel.'
+                );
+            }
+
+            DB::commit();
+
+            return redirect()->route('inscripcion.index')
+                ->with('success', 'Se han inscrito y registrado correctamente ' . count($validatedData) . ' postulantes desde el Excel.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['excel_file' => 'Error al registrar los postulantes en la base de datos: ' . $e->getMessage()]);
+        }
     }
 }

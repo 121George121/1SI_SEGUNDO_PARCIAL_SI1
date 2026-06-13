@@ -343,8 +343,18 @@ class gestionarPagosController extends Controller
 
         $pago = $this->buscarPagoInscripcion($idPago, $codigoInscripcion);
 
-        if (!$pago) return redirect()->route('pagos.index')->withErrors(['error' => 'Pago no encontrado.']);
-        if (strtolower(trim($pago->estado_pago_inscripcion)) === 'liquidado') return redirect()->route('pagos.index')->withErrors(['error' => 'Pago ya liquidado.']);
+        if (!$pago) {
+            if (Auth::check() && Auth::user()->persona?->tipo_Postulante) {
+                return redirect()->route('estudiante.pagar-matricula')->withErrors(['error' => 'Pago no encontrado.']);
+            }
+            return redirect()->route('pagos.index')->withErrors(['error' => 'Pago no encontrado.']);
+        }
+        if (strtolower(trim($pago->estado_pago_inscripcion)) === 'liquidado') {
+            if (Auth::check() && Auth::user()->persona?->tipo_Postulante) {
+                return redirect()->route('estudiante.pagar-matricula')->withErrors(['error' => 'Pago ya liquidado.']);
+            }
+            return redirect()->route('pagos.index')->withErrors(['error' => 'Pago ya liquidado.']);
+        }
 
         try {
             $provider = new PayPal;
@@ -438,10 +448,16 @@ class gestionarPagosController extends Controller
             } catch (\Throwable $e) {}
 
             DB::commit();
+            if (Auth::check() && Auth::user()->persona?->tipo_Postulante) {
+                return redirect()->route('estudiante.pagar-matricula')->with('success', 'Pago con PayPal completado.');
+            }
             return redirect()->route('pagos.index')->with('success', 'Pago con PayPal completado.');
 
         } catch (\Exception $e) {
             DB::rollBack();
+            if (Auth::check() && Auth::user()->persona?->tipo_Postulante) {
+                return redirect()->route('estudiante.pagar-matricula')->withErrors(['error' => 'Error éxito PayPal: ' . $e->getMessage()]);
+            }
             return redirect()->route('pagos.index')->withErrors(['error' => 'Error éxito PayPal: ' . $e->getMessage()]);
         }
     }
@@ -453,6 +469,9 @@ class gestionarPagosController extends Controller
         }
 
         $this->registrarBitacora('Canceló pago ID ' . $idPago . ' en PayPal');
+        if (Auth::check() && Auth::user()->persona?->tipo_Postulante) {
+            return redirect()->route('estudiante.pagar-matricula')->withErrors(['error' => 'El pago con PayPal fue cancelado.']);
+        }
         return redirect()->route('pagos.index')->withErrors(['error' => 'El pago con PayPal fue cancelado.']);
     }
 

@@ -52,13 +52,11 @@ Route::prefix('usuarios')->middleware('auth')->group(function () {
     Route::get('/', [gestionarUsuariosyRolesController::class, 'index'])->name('usuarios.index');
     Route::get('/create', [gestionarUsuariosyRolesController::class, 'create'])->name('usuarios.create');
     Route::post('/store', [gestionarUsuariosyRolesController::class, 'store'])->name('usuarios.store');
-    Route::get('/descargar-plantilla', [gestionarUsuariosyRolesController::class, 'descargarPlantilla'])->name('usuarios.descargarPlantilla');
     Route::get('/{id}/edit', [gestionarUsuariosyRolesController::class, 'edit'])->name('usuarios.edit');
     Route::put('/{id}', [gestionarUsuariosyRolesController::class, 'update'])->name('usuarios.update');
     Route::delete('/{id}', [gestionarUsuariosyRolesController::class, 'destroy'])->name('usuarios.destroy');
     Route::get('/{id}/roles', [gestionarUsuariosyRolesController::class, 'mostrarAsignarRoles'])->name('usuarios.roles');
     Route::post('/{id}/roles', [gestionarUsuariosyRolesController::class, 'assignRoles'])->name('usuarios.roles.update');
-    Route::post('/importar-postulantes', [gestionarUsuariosyRolesController::class, 'importarPostulantes'])->name('usuarios.importarPostulantes');
 });
 
 Route::prefix('bitacora')->middleware('auth')->group(function () {
@@ -181,6 +179,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/docentes/{id}/documentos', [gestionarDocentesController::class, 'guardarDocumentos'])
     ->name('docentes.documentos.guardar');
 
+    Route::post('/docentes/importar-docentes', [gestionarDocentesController::class, 'importarDocentes'])->name('docentes.importarDocentes');
+    Route::get('/docentes/descargar-plantilla', [gestionarDocentesController::class, 'descargarPlantilla'])->name('docentes.descargarPlantilla');
+
     // CU18 - Generar Reportes
     Route::get('/reportes', [reporteController::class, 'index'])->name('reportes.index');
     Route::post('/reportes/generar', [reporteController::class, 'generar'])->name('reportes.generar');
@@ -199,6 +200,13 @@ Route::middleware('auth')->group(function () {
         ->name('inscripcion.index');
     Route::get('/inscripcion/buscar-ci/{ci}', [gestionarInscripcionController::class, 'buscarPorCi'])
         ->name('inscripcion.buscarCi');
+
+    // ── Rutas estáticas de importación ANTES de las rutas con parámetros ──
+    Route::get('/inscripcion/descargar-plantilla', [gestionarInscripcionController::class, 'descargarPlantilla'])
+        ->name('inscripcion.descargarPlantilla');
+    Route::post('/inscripcion/importar-postulantes', [gestionarInscripcionController::class, 'importarPostulantes'])
+        ->name('inscripcion.importarPostulantes');
+
     Route::post('/inscripcion', [gestionarInscripcionController::class, 'store'])
         ->name('inscripcion.store');
     Route::put('/inscripcion/{id}', [gestionarInscripcionController::class, 'update'])
@@ -206,9 +214,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/inscripcion/{id}', [gestionarInscripcionController::class, 'destroy'])
         ->name('inscripcion.destroy');
     Route::get('/inscripcion/{codigo}/documentos', [gestionarInscripcionController::class, 'documentos'])
-    ->name('inscripcion.documentos.form');
+        ->name('inscripcion.documentos.form');
     Route::post('/inscripcion/{codigo}/documentos', [gestionarInscripcionController::class, 'guardarDocumentos'])
-    ->name('inscripcion.documentos.guardar');
+        ->name('inscripcion.documentos.guardar');
 
     // CU07 - Gestionar Preferencia
     Route::post('/preferencias', [gestionarPreferenciaController::class, 'store'])->name('preferencias.store');
@@ -333,5 +341,16 @@ Route::middleware('auth')->group(function () {
         return redirect()->route('pagos.index');
     })->name('gestion-financiera.menu');
 });
+
+// Rutas exclusivas del estudiante/postulante
+Route::middleware(['auth', 'student'])->prefix('estudiante')->group(function () {
+    Route::get('/perfil', [App\Http\Controllers\Usuario_Seguridad_y_Auditoria\EstudianteController::class, 'perfil'])->name('estudiante.perfil');
+    Route::get('/estado-inscripcion', [App\Http\Controllers\Usuario_Seguridad_y_Auditoria\EstudianteController::class, 'estadoInscripcion'])->name('estudiante.estado-inscripcion');
+    Route::get('/estado-admision', [App\Http\Controllers\Usuario_Seguridad_y_Auditoria\EstudianteController::class, 'estadoAdmision'])->name('estudiante.estado-admision');
+    Route::get('/notas', [App\Http\Controllers\Usuario_Seguridad_y_Auditoria\EstudianteController::class, 'notas'])->name('estudiante.notas');
+    Route::get('/pagar-matricula', [App\Http\Controllers\Usuario_Seguridad_y_Auditoria\EstudianteController::class, 'pagarMatricula'])->name('estudiante.pagar-matricula');
+    Route::get('/boleta-inscripcion', [App\Http\Controllers\Usuario_Seguridad_y_Auditoria\EstudianteController::class, 'boletaInscripcion'])->name('estudiante.boleta-inscripcion');
+});
+
 
 

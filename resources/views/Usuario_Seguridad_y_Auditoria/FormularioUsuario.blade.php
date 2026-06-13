@@ -461,26 +461,6 @@
             </div>
         </div>
 
-        <!-- Card 7: Datos Postulante (Dinamico) -->
-        <div id="camposPostulante" class="form-card" style="display:none; background:#fffbeb; border-color:#fde047;">
-            <h3>Datos de Postulante</h3>
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="estado_inscripcion">Estado de Inscripción</label>
-                    <select id="estado_inscripcion" name="estado_inscripcion">
-                        <option value="En_Revision" @selected(old('estado_inscripcion', $postulante->estado_inscripcion ?? 'En_Revision') === 'En_Revision')>En Revisión</option>
-                        <option value="Inscrito" @selected(old('estado_inscripcion', $postulante->estado_inscripcion ?? '') === 'Inscrito')>Inscrito</option>
-                        <option value="Observado" @selected(old('estado_inscripcion', $postulante->estado_inscripcion ?? '') === 'Observado')>Observado</option>
-                        <option value="inactivo" @selected(old('estado_inscripcion', $postulante->estado_inscripcion ?? '') === 'inactivo')>Inactivo</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="fecha_registro">Fecha de Registro</label>
-                    <input type="date" id="fecha_registro" name="fecha_registro" value="{{ old('fecha_registro', $postulante->fecha_registro ?? now()->toDateString()) }}">
-                </div>
-            </div>
-        </div>
 
         <!-- Botones de Acción -->
         <div class="form-actions">
@@ -530,7 +510,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const camposSuperadministrador = document.getElementById('camposSuperadministrador');
     const camposAdministrador = document.getElementById('camposAdministrador');
     const camposDocente = document.getElementById('camposDocente');
-    const camposPostulante = document.getElementById('camposPostulante');
+
 
     function verificarRoles() {
         const selectedRol = document.querySelector('input[name="rol"]:checked');
@@ -539,7 +519,7 @@ document.addEventListener('DOMContentLoaded', function () {
         camposSuperadministrador.style.display = (val === 'tipo_Superadministrador') ? 'block' : 'none';
         camposAdministrador.style.display = (val === 'tipo_Administrador') ? 'block' : 'none';
         camposDocente.style.display = (val === 'tipo_Docente') ? 'block' : 'none';
-        camposPostulante.style.display = (val === 'tipo_Postulante') ? 'block' : 'none';
+
     }
 
     document.querySelectorAll('input[name="rol"]').forEach(function (radio) {

@@ -13,6 +13,8 @@ window.isSidebarCollapsed = localStorage.getItem('sidebar-collapsed') === 'true'
 </script>
 
 @php
+    $esPostulante = Auth::check() && Auth::user()->persona?->tipo_Postulante;
+
     // Check for database records to disable/enable routes
     $hasGestiones = \Illuminate\Support\Facades\DB::table('gestion')->exists();
     $hasCarreras = \Illuminate\Support\Facades\DB::table('carrera')->exists();
@@ -72,136 +74,164 @@ window.isSidebarCollapsed = localStorage.getItem('sidebar-collapsed') === 'true'
 
     <div class="sidebar-scroll">
         <nav class="menu-modulo">
-            <!-- Dashboard Link -->
-            <a href="{{ route('menu') }}" class="menu-item {{ request()->routeIs('menu') || request()->routeIs('dashboard') ? 'activo' : '' }}">
-                <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                <span>Dashboard</span>
-            </a>
+            @if($esPostulante)
+                <!-- Vista del Estudiante / Postulante -->
+                <a href="{{ route('estudiante.perfil') }}" class="menu-item {{ request()->routeIs('estudiante.perfil') ? 'activo' : '' }}">
+                    <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    <span>Perfil</span>
+                </a>
 
-            <!-- Folder 1: Gestión Académica -->
-            <div class="folder-container {{ $academicaActiva ? 'abierto' : '' }}">
-                <button type="button" class="folder-header {{ $academicaActiva ? 'folder-activo-header' : '' }}" onclick="toggleFolder(this)">
-                    <span class="header-left">
-                        <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-                        <span>Gestión Académica</span>
-                    </span>
-                    <svg class="chevron-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                </button>
-                <div class="folder-content">
-                    <a href="{{ route('carreras-cupos.index') }}" class="sub-item {{ request()->routeIs('carreras-cupos.*') ? 'activo' : '' }}">
-                        CU06 - Carreras y Cupos
-                    </a>
-                    <a href="{{ route('gestiones.index') }}" class="sub-item {{ request()->routeIs('gestiones.*') ? 'activo' : '' }}">
-                        Gestionar Gestiones
-                    </a>
-                    <a href="{{ route('modalidades.index') }}" class="sub-item {{ request()->routeIs('modalidades.*') ? 'activo' : '' }}">
-                        Gestionar Modalidades
-                    </a>
-                    <a href="{{ route('turnos.index') }}" class="sub-item {{ request()->routeIs('turnos.*') ? 'activo' : '' }}">
-                        Gestionar Turnos
-                    </a>
-                    <a href="{{ route('materias.index') }}" class="sub-item {{ request()->routeIs('materias.*') ? 'activo' : '' }}">
-                        CU14 - Materias
-                    </a>
-                    <a href="{{ route('horarios.index') }}" class="sub-item {{ request()->routeIs('horarios.*') ? 'activo' : '' }}">
-                        CU14 - Horarios
-                    </a>
-                    <a href="{{ $disableGrupos ? '#' : route('grupos.index') }}" class="sub-item {{ request()->routeIs('grupos.*') ? 'activo' : '' }} {{ $disableGrupos ? 'deshabilitado' : '' }}" title="{{ $disableGrupos ? 'Requiere: Carreras, Gestiones, Turnos, Materias y Horarios.' : '' }}">
-                        CU11 - Gestionar Grupos
-                    </a>
-                    <a href="{{ $disableAsignarDocentes ? '#' : route('asignaciones-docentes.index') }}" class="sub-item {{ request()->routeIs('asignaciones-docentes.*') ? 'activo' : '' }} {{ $disableAsignarDocentes ? 'deshabilitado' : '' }}" title="{{ $disableAsignarDocentes ? 'Requiere: Carreras, Gestiones, Turnos, Materias y Horarios.' : '' }}">
-                        CU15 - Asignar Docentes
-                    </a>
-                    <a href="{{ $disableAsignarPostulantes ? '#' : route('postulantes-grupos.index') }}" class="sub-item {{ request()->routeIs('postulantes-grupos.*') ? 'activo' : '' }} {{ $disableAsignarPostulantes ? 'deshabilitado' : '' }}" title="{{ $disableAsignarPostulantes ? 'Requiere: Carreras, Gestiones, Turnos, Materias y Horarios.' : '' }}">
-                        CU12 - Asignar Postulantes
-                    </a>
-                    <a href="{{ $disableEvaluaciones ? '#' : route('evaluaciones-notas.index') }}" class="sub-item {{ request()->routeIs('evaluaciones-notas.*') || request()->routeIs('evaluaciones.*') || request()->routeIs('notas.*') ? 'activo' : '' }} {{ $disableEvaluaciones ? 'deshabilitado' : '' }}" title="{{ $disableEvaluaciones ? 'Requiere: Carreras, Gestiones, Turnos, Materias y Horarios.' : '' }}">
-                        CU16 - Evaluaciones y Notas
-                    </a>
-                    <a href="{{ $disableAdmision ? '#' : route('admision.index') }}" class="sub-item {{ request()->routeIs('admision.*') ? 'activo' : '' }} {{ $disableAdmision ? 'deshabilitado' : '' }}" title="{{ $disableAdmision ? 'Requiere: Carreras, Gestiones, Turnos, Materias y Horarios.' : '' }}">
-                        CU17 - Admisión Final
-                    </a>
-                </div>
-            </div>
+                <a href="{{ route('estudiante.estado-inscripcion') }}" class="menu-item {{ request()->routeIs('estudiante.estado-inscripcion') ? 'activo' : '' }}">
+                    <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    <span>Estado de inscripción</span>
+                </a>
 
-            <!-- Folder 2: Inscripción y Documentación -->
-            <div class="folder-container {{ $inscripcionActiva ? 'abierto' : '' }}">
-                <button type="button" class="folder-header {{ $inscripcionActiva ? 'folder-activo-header' : '' }}" onclick="toggleFolder(this)">
-                    <span class="header-left">
-                        <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                        <span>Inscripción y Documentos</span>
-                    </span>
-                    <svg class="chevron-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                </button>
-                <div class="folder-content">
-                    <a href="{{ route('documentos.index') }}" class="sub-item {{ request()->routeIs('documentos.*') ? 'activo' : '' }}">
-                        CU4 - Requisitos Documentos
-                    </a>
-                    <a href="{{ $disableInscripcion ? '#' : route('inscripcion.index') }}" class="sub-item {{ request()->routeIs('inscripcion.*') ? 'activo' : '' }} {{ $disableInscripcion ? 'deshabilitado' : '' }}" title="{{ $disableInscripcion ? 'Requiere: Gestiones, Carreras, Modalidades y Turnos.' : '' }}">
-                        CU03 - Gestionar Inscripción
-                    </a>
-                </div>
-            </div>
+                <a href="{{ route('estudiante.estado-admision') }}" class="menu-item {{ request()->routeIs('estudiante.estado-admision') || request()->routeIs('estudiante.boleta-inscripcion') ? 'activo' : '' }}">
+                    <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <span>Estado de admisión</span>
+                </a>
 
-            <!-- Folder 3: Usuario, Seguridad y Auditoría -->
-            <div class="folder-container {{ $seguridadActiva ? 'abierto' : '' }}">
-                <button type="button" class="folder-header {{ $seguridadActiva ? 'folder-activo-header' : '' }}" onclick="toggleFolder(this)">
-                    <span class="header-left">
-                        <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                        <span>Seguridad y Auditoría</span>
-                    </span>
-                    <svg class="chevron-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                </button>
-                <div class="folder-content">
-                    <a href="{{ route('usuarios.index') }}" class="sub-item {{ request()->routeIs('usuarios.*') ? 'activo' : '' }}">
-                        CU2 - Usuarios y Roles
-                    </a>
-                    <a href="{{ route('bitacora.index') }}" class="sub-item {{ request()->routeIs('bitacora.*') ? 'activo' : '' }}">
-                        CU19 - Bitácora
-                    </a>
-                </div>
-            </div>
+                <a href="{{ route('estudiante.notas') }}" class="menu-item {{ request()->routeIs('estudiante.notas') ? 'activo' : '' }}">
+                    <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    <span>Notas</span>
+                </a>
 
-            <!-- Folder 4: Logística y Reportes -->
-            <div class="folder-container {{ $logisticaActiva ? 'abierto' : '' }}">
-                <button type="button" class="folder-header {{ $logisticaActiva ? 'folder-activo-header' : '' }}" onclick="toggleFolder(this)">
-                    <span class="header-left">
-                        <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                        <span>Logística y Recursos</span>
-                    </span>
-                    <svg class="chevron-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                </button>
-                <div class="folder-content">
-                    <a href="{{ route('aulas.index') }}" class="sub-item {{ request()->routeIs('aulas.*') ? 'activo' : '' }}">
-                        CU08 - Gestionar Aulas
-                    </a>
-                    <a href="{{ route('docentes.index') }}" class="sub-item {{ request()->routeIs('docentes.*') ? 'activo' : '' }}">
-                        CU09 - Gestionar Docentes
-                    </a>
-                    <a href="{{ route('especialidades.index') }}" class="sub-item {{ request()->routeIs('especialidades.*') ? 'activo' : '' }}">
-                        Gestionar Especialidades
-                    </a>
-                    <a href="{{ $disableReportes ? '#' : route('reportes.index') }}" class="sub-item {{ request()->routeIs('reportes.*') ? 'activo' : '' }} {{ $disableReportes ? 'deshabilitado' : '' }}" title="{{ $disableReportes ? 'Requiere: Gestiones.' : '' }}">
-                        CU18 - Generar Reportes
-                    </a>
-                </div>
-            </div>
+                <a href="{{ route('estudiante.pagar-matricula') }}" class="menu-item {{ request()->routeIs('estudiante.pagar-matricula') ? 'activo' : '' }}">
+                    <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                    <span>Pagar matrícula</span>
+                </a>
+            @else
+                <!-- Dashboard Link -->
+                <a href="{{ route('menu') }}" class="menu-item {{ request()->routeIs('menu') || request()->routeIs('dashboard') ? 'activo' : '' }}">
+                    <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                    <span>Dashboard</span>
+                </a>
 
-            <!-- Folder 5: Gestión Financiera -->
-            <div class="folder-container {{ $financieraActiva ? 'abierto' : '' }}">
-                <button type="button" class="folder-header {{ $financieraActiva ? 'folder-activo-header' : '' }}" onclick="toggleFolder(this)">
-                    <span class="header-left">
-                        <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
-                        <span>Gestión Financiera</span>
-                    </span>
-                    <svg class="chevron-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                </button>
-                <div class="folder-content">
-                    <a href="{{ $disablePagos ? '#' : route('pagos.index') }}" class="sub-item {{ request()->routeIs('pagos.*') || request()->routeIs('gestion-financiera.*') || request()->routeIs('paypal.*') ? 'activo' : '' }} {{ $disablePagos ? 'deshabilitado' : '' }}" title="{{ $disablePagos ? 'Requiere: Inscripciones.' : '' }}">
-                        CU05 - Gestionar Pagos
-                    </a>
+                <!-- Folder 1: Gestión Académica -->
+                <div class="folder-container {{ $academicaActiva ? 'abierto' : '' }}">
+                    <button type="button" class="folder-header {{ $academicaActiva ? 'folder-activo-header' : '' }}" onclick="toggleFolder(this)">
+                        <span class="header-left">
+                            <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                            <span>Gestión Académica</span>
+                        </span>
+                        <svg class="chevron-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                    <div class="folder-content">
+                        <a href="{{ route('carreras-cupos.index') }}" class="sub-item {{ request()->routeIs('carreras-cupos.*') ? 'activo' : '' }}">
+                            CU06 - Carreras y Cupos
+                        </a>
+                        <a href="{{ route('gestiones.index') }}" class="sub-item {{ request()->routeIs('gestiones.*') ? 'activo' : '' }}">
+                            Gestionar Gestiones
+                        </a>
+                        <a href="{{ route('modalidades.index') }}" class="sub-item {{ request()->routeIs('modalidades.*') ? 'activo' : '' }}">
+                            Gestionar Modalidades
+                        </a>
+                        <a href="{{ route('turnos.index') }}" class="sub-item {{ request()->routeIs('turnos.*') ? 'activo' : '' }}">
+                            Gestionar Turnos
+                        </a>
+                        <a href="{{ route('materias.index') }}" class="sub-item {{ request()->routeIs('materias.*') ? 'activo' : '' }}">
+                            CU14 - Materias
+                        </a>
+                        <a href="{{ route('horarios.index') }}" class="sub-item {{ request()->routeIs('horarios.*') ? 'activo' : '' }}">
+                            CU14 - Horarios
+                        </a>
+                        <a href="{{ $disableGrupos ? '#' : route('grupos.index') }}" class="sub-item {{ request()->routeIs('grupos.*') ? 'activo' : '' }} {{ $disableGrupos ? 'deshabilitado' : '' }}" title="{{ $disableGrupos ? 'Requiere: Carreras, Gestiones, Turnos, Materias y Horarios.' : '' }}">
+                            CU11 - Gestionar Grupos
+                        </a>
+                        <a href="{{ $disableAsignarDocentes ? '#' : route('asignaciones-docentes.index') }}" class="sub-item {{ request()->routeIs('asignaciones-docentes.*') ? 'activo' : '' }} {{ $disableAsignarDocentes ? 'deshabilitado' : '' }}" title="{{ $disableAsignarDocentes ? 'Requiere: Carreras, Gestiones, Turnos, Materias y Horarios.' : '' }}">
+                            CU15 - Asignar Docentes
+                        </a>
+                        <a href="{{ $disableAsignarPostulantes ? '#' : route('postulantes-grupos.index') }}" class="sub-item {{ request()->routeIs('postulantes-grupos.*') ? 'activo' : '' }} {{ $disableAsignarPostulantes ? 'deshabilitado' : '' }}" title="{{ $disableAsignarPostulantes ? 'Requiere: Carreras, Gestiones, Turnos, Materias y Horarios.' : '' }}">
+                            CU12 - Asignar Postulantes
+                        </a>
+                        <a href="{{ $disableEvaluaciones ? '#' : route('evaluaciones-notas.index') }}" class="sub-item {{ request()->routeIs('evaluaciones-notas.*') || request()->routeIs('evaluaciones.*') || request()->routeIs('notas.*') ? 'activo' : '' }} {{ $disableEvaluaciones ? 'deshabilitado' : '' }}" title="{{ $disableEvaluaciones ? 'Requiere: Carreras, Gestiones, Turnos, Materias y Horarios.' : '' }}">
+                            CU16 - Evaluaciones y Notas
+                        </a>
+                        <a href="{{ $disableAdmision ? '#' : route('admision.index') }}" class="sub-item {{ request()->routeIs('admision.*') ? 'activo' : '' }} {{ $disableAdmision ? 'deshabilitado' : '' }}" title="{{ $disableAdmision ? 'Requiere: Carreras, Gestiones, Turnos, Materias y Horarios.' : '' }}">
+                            CU17 - Admisión Final
+                        </a>
+                    </div>
                 </div>
-            </div>
+
+                <!-- Folder 2: Inscripción y Documentación -->
+                <div class="folder-container {{ $inscripcionActiva ? 'abierto' : '' }}">
+                    <button type="button" class="folder-header {{ $inscripcionActiva ? 'folder-activo-header' : '' }}" onclick="toggleFolder(this)">
+                        <span class="header-left">
+                            <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            <span>Inscripción y Documentos</span>
+                        </span>
+                        <svg class="chevron-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                    <div class="folder-content">
+                        <a href="{{ route('documentos.index') }}" class="sub-item {{ request()->routeIs('documentos.*') ? 'activo' : '' }}">
+                            CU4 - Requisitos Documentos
+                        </a>
+                        <a href="{{ $disableInscripcion ? '#' : route('inscripcion.index') }}" class="sub-item {{ request()->routeIs('inscripcion.*') ? 'activo' : '' }} {{ $disableInscripcion ? 'deshabilitado' : '' }}" title="{{ $disableInscripcion ? 'Requiere: Gestiones, Carreras, Modalidades y Turnos.' : '' }}">
+                            CU03 - Gestionar Inscripción
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Folder 3: Usuario, Seguridad y Auditoría -->
+                <div class="folder-container {{ $seguridadActiva ? 'abierto' : '' }}">
+                    <button type="button" class="folder-header {{ $seguridadActiva ? 'folder-activo-header' : '' }}" onclick="toggleFolder(this)">
+                        <span class="header-left">
+                            <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                            <span>Seguridad y Auditoría</span>
+                        </span>
+                        <svg class="chevron-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                    <div class="folder-content">
+                        <a href="{{ route('usuarios.index') }}" class="sub-item {{ request()->routeIs('usuarios.*') ? 'activo' : '' }}">
+                            CU2 - Usuarios y Roles
+                        </a>
+                        <a href="{{ route('bitacora.index') }}" class="sub-item {{ request()->routeIs('bitacora.*') ? 'activo' : '' }}">
+                            CU19 - Bitácora
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Folder 4: Logística y Reportes -->
+                <div class="folder-container {{ $logisticaActiva ? 'abierto' : '' }}">
+                    <button type="button" class="folder-header {{ $logisticaActiva ? 'folder-activo-header' : '' }}" onclick="toggleFolder(this)">
+                        <span class="header-left">
+                            <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                            <span>Logística y Recursos</span>
+                        </span>
+                        <svg class="chevron-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                    <div class="folder-content">
+                        <a href="{{ route('aulas.index') }}" class="sub-item {{ request()->routeIs('aulas.*') ? 'activo' : '' }}">
+                            CU08 - Gestionar Aulas
+                        </a>
+                        <a href="{{ route('docentes.index') }}" class="sub-item {{ request()->routeIs('docentes.*') ? 'activo' : '' }}">
+                            CU09 - Gestionar Docentes
+                        </a>
+                        <a href="{{ route('especialidades.index') }}" class="sub-item {{ request()->routeIs('especialidades.*') ? 'activo' : '' }}">
+                            Gestionar Especialidades
+                        </a>
+                        <a href="{{ $disableReportes ? '#' : route('reportes.index') }}" class="sub-item {{ request()->routeIs('reportes.*') ? 'activo' : '' }} {{ $disableReportes ? 'deshabilitado' : '' }}" title="{{ $disableReportes ? 'Requiere: Gestiones.' : '' }}">
+                            CU18 - Generar Reportes
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Folder 5: Gestión Financiera -->
+                <div class="folder-container {{ $financieraActiva ? 'abierto' : '' }}">
+                    <button type="button" class="folder-header {{ $financieraActiva ? 'folder-activo-header' : '' }}" onclick="toggleFolder(this)">
+                        <span class="header-left">
+                            <svg class="menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                            <span>Gestión Financiera</span>
+                        </span>
+                        <svg class="chevron-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                    <div class="folder-content">
+                        <a href="{{ $disablePagos ? '#' : route('pagos.index') }}" class="sub-item {{ request()->routeIs('pagos.*') || request()->routeIs('gestion-financiera.*') || request()->routeIs('paypal.*') ? 'activo' : '' }} {{ $disablePagos ? 'deshabilitado' : '' }}" title="{{ $disablePagos ? 'Requiere: Inscripciones.' : '' }}">
+                            CU05 - Gestionar Pagos
+                        </a>
+                    </div>
+                </div>
+            @endif
         </nav>
     </div>
 
