@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Usuario_Seguridad_y_Auditoria\autenticacionController;
 use App\Http\Controllers\Usuario_Seguridad_y_Auditoria\gestionarUsuariosyRolesController;
 use App\Http\Controllers\Usuario_Seguridad_y_Auditoria\gestionarBitacoraController;
@@ -41,7 +42,7 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    Route::view('/menu', 'Menu')->name('menu');
+    Route::get('/menu', [DashboardController::class, 'index'])->name('menu');
     Route::post('/logout', [autenticacionController::class, 'logout'])->name('logout');
 });
 
@@ -323,9 +324,7 @@ Route::middleware('auth')->group(function () {
 Route::middleware('auth')->group(function () {
 
     // Dashboard
-    Route::get('/dashboard', function () {
-        return view('Menu'); // vista principal del dashboard
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Gestión Financiera
     Route::get('/gestion-financiera', function () {

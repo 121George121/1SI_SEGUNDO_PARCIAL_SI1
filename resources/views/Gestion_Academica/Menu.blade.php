@@ -19,91 +19,6 @@
         min-height: 100vh;
     }
 
-    aside {
-        width: 280px;
-        background: #0b2d6b;
-        color: white;
-        display: flex;
-        flex-direction: column;
-        position: fixed;
-        height: 100vh;
-        padding: 0;
-        z-index: 100;
-    }
-
-    .sidebar-header {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        padding: 24px;
-        border-bottom: 3px solid #1e3a8a;
-    }
-
-    .sidebar-header img {
-        width: 60px;
-        height: 60px;
-        object-fit: contain;
-    }
-
-    .sidebar-header span {
-        font-size: 20px;
-        font-weight: 800;
-        line-height: 1.2;
-    }
-
-    .menu-modulo {
-        margin-top: 16px;
-        padding: 0 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .menu-modulo a {
-        background: rgba(255,255,255,0.15);
-        padding: 12px;
-        border-radius: 8px;
-        text-align: center;
-        color: white;
-        text-decoration: none;
-        font-weight: bold;
-        transition: background 0.2s;
-    }
-
-    .menu-modulo a:hover,
-    .menu-modulo a.activo {
-        background: #dc2626;
-    }
-
-    .menu-modulo a.deshabilitado {
-        background: rgba(120, 120, 120, 0.2) !important;
-        color: #9ca3af !important;
-        cursor: not-allowed !important;
-        pointer-events: none !important;
-        opacity: 0.6;
-    }
-
-    .logout {
-        margin-top: auto;
-        padding: 16px;
-    }
-
-    .logout button {
-        width: 100%;
-        padding: 12px;
-        background: #dc2626;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-
-    .logout button:hover {
-        background: #b91c1c;
-    }
-
     main {
         margin-left: 280px;
         flex: 1;
@@ -266,27 +181,9 @@
     }
 
     @media (max-width: 768px) {
-        aside {
-            width: 220px;
-        }
-
         main {
             margin-left: 220px;
             padding: 24px;
-        }
-
-        .sidebar-header {
-            padding: 18px;
-            gap: 10px;
-        }
-
-        .sidebar-header img {
-            width: 50px;
-            height: 50px;
-        }
-
-        .sidebar-header span {
-            font-size: 16px;
         }
 
         .titulo {
@@ -298,95 +195,7 @@
 
 <body>
 
-    <aside>
-        <div class="sidebar-header">
-            <img src="{{ asset('images/LogoFICCT (1).png') }}" alt="Logo">
-            <span>Gestión Académica</span>
-        </div>
-
-        <nav class="menu-modulo">
-            <a href="{{ route('menu') }}">Volver al Dashboard</a>
-
-            @php
-                $hasCarreras = \Illuminate\Support\Facades\DB::table('carrera')->exists();
-                $hasGestiones = \Illuminate\Support\Facades\DB::table('gestion')->exists();
-                $hasTurnos = \Illuminate\Support\Facades\DB::table('turno')->exists();
-                $hasMaterias = \Illuminate\Support\Facades\DB::table('materia')->exists();
-                $hasHorarios = \Illuminate\Support\Facades\DB::table('horario')->exists();
-
-                // Check if the 5 required base catalogs are registered
-                $disableRest = !$hasCarreras || !$hasGestiones || !$hasTurnos || !$hasMaterias || !$hasHorarios;
-
-                $disableGrupos = $disableRest;
-                $disableAsignarPostulantes = $disableRest;
-                $disableAsignarDocentes = $disableRest;
-                $disableEvaluaciones = $disableRest;
-                $disableAdmision = $disableRest;
-            @endphp
-
-            <a href="{{ route('carreras-cupos.index') }}"
-                class="{{ request()->routeIs('carreras-cupos.*') ? 'activo' : '' }}">
-                CU06 - Carreras y Cupos
-            </a>
-
-            <a href="{{ $disableGrupos ? '#' : route('grupos.index') }}" 
-               class="{{ request()->routeIs('grupos.*') ? 'activo' : '' }} {{ $disableGrupos ? 'deshabilitado' : '' }}"
-               title="{{ $disableGrupos ? 'Requiere registrar previamente: Carreras y Cupos, Gestiones, Turnos, Materias y Horarios.' : '' }}">
-                CU11 - Gestionar Grupos
-            </a>
-
-            <a href="{{ $disableAsignarPostulantes ? '#' : route('postulantes-grupos.index') }}" 
-               class="{{ request()->routeIs('postulantes-grupos.*') ? 'activo' : '' }} {{ $disableAsignarPostulantes ? 'deshabilitado' : '' }}"
-               title="{{ $disableAsignarPostulantes ? 'Requiere registrar previamente: Carreras y Cupos, Gestiones, Turnos, Materias y Horarios.' : '' }}">
-                CU12 - Asignar Postulantes a Grupos
-            </a>
-
-            <a href="{{ route('gestiones.index') }}" class="{{ request()->routeIs('gestiones.*') ? 'activo' : '' }}">
-                Gestionar Gestiones
-            </a>
-
-            <a href="{{ route('modalidades.index') }}" class="{{ request()->routeIs('modalidades.*') ? 'activo' : '' }}">
-                Gestionar Modalidades
-            </a>
-
-            <a href="{{ route('turnos.index') }}" class="{{ request()->routeIs('turnos.*') ? 'activo' : '' }}">
-                Gestionar Turnos
-            </a>
-
-            <a href="{{ route('materias.index') }}" class="{{ request()->routeIs('materias.*') ? 'activo' : '' }}">
-                CU14 - Gestionar Materias
-            </a>
-
-            <a href="{{ route('horarios.index') }}" class="{{ request()->routeIs('horarios.*') ? 'activo' : '' }}">
-                CU14 - Gestionar Horarios
-            </a>
-
-            <a href="{{ $disableAsignarDocentes ? '#' : route('asignaciones-docentes.index') }}" 
-               class="{{ request()->routeIs('asignaciones-docentes.*') ? 'activo' : '' }} {{ $disableAsignarDocentes ? 'deshabilitado' : '' }}"
-               title="{{ $disableAsignarDocentes ? 'Requiere registrar previamente: Carreras y Cupos, Gestiones, Turnos, Materias y Horarios.' : '' }}">
-                CU15 - Asignar Docentes a Grupos y Materias
-            </a>
-
-            <a href="{{ $disableEvaluaciones ? '#' : route('evaluaciones-notas.index') }}" 
-               class="{{ request()->routeIs('evaluaciones-notas.*') || request()->routeIs('evaluaciones.*') || request()->routeIs('notas.*') ? 'activo' : '' }} {{ $disableEvaluaciones ? 'deshabilitado' : '' }}"
-               title="{{ $disableEvaluaciones ? 'Requiere registrar previamente: Carreras y Cupos, Gestiones, Turnos, Materias y Horarios.' : '' }}">
-                CU16 - Gestionar Evaluaciones y Notas
-            </a>
-
-            <a href="{{ $disableAdmision ? '#' : route('admision.index') }}" 
-               class="{{ request()->routeIs('admision.*') ? 'activo' : '' }} {{ $disableAdmision ? 'deshabilitado' : '' }}"
-               title="{{ $disableAdmision ? 'Requiere registrar previamente: Carreras y Cupos, Gestiones, Turnos, Materias y Horarios.' : '' }}">
-                CU17 - Gestionar Admisión Final
-            </a>
-        </nav>
-
-        <div class="logout">
-            <form action="{{ route('logout') }}" method="POST">
-                @csrf
-                <button type="submit">Cerrar sesión</button>
-            </form>
-        </div>
-    </aside>
+    @include('components.sidebar')
 
     <main>
     @yield('content')

@@ -20,91 +20,6 @@
         min-height: 100vh;
     }
 
-    aside {
-        width: 280px;
-        background: #0b2d6b;
-        color: white;
-        display: flex;
-        flex-direction: column;
-        position: fixed;
-        height: 100vh;
-        padding: 0;
-    }
-
-    .sidebar-header {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        padding: 24px;
-        border-bottom: 3px solid #1e3a8a;
-    }
-
-    .sidebar-header img {
-        width: 70px;
-        height: 70px;
-        object-fit: contain;
-    }
-
-    .sidebar-header span {
-        font-size: 24px;
-        font-weight: 800;
-        line-height: 1.2;
-    }
-
-    .menu-modulo {
-        margin-top: 22px;
-        padding: 0 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .menu-modulo div {
-        background: rgba(255,255,255,0.15);
-        padding: 13px;
-        border-radius: 8px;
-        text-align: center;
-        cursor: pointer;
-        transition: background 0.2s;
-        font-weight: bold;
-    }
-
-    .menu-modulo div:hover {
-        background: rgba(255,255,255,0.30);
-    }
-
-    .menu-modulo .activo {
-        background: #dc2626;
-    }
-
-    .menu-modulo .deshabilitado {
-        background: rgba(120, 120, 120, 0.2) !important;
-        color: #9ca3af !important;
-        cursor: not-allowed !important;
-        pointer-events: none !important;
-        opacity: 0.6;
-    }
-
-    .logout {
-        margin-top: auto;
-        padding: 16px;
-    }
-
-    .logout button {
-        width: 100%;
-        padding: 12px;
-        background: #dc2626;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-weight: bold;
-        cursor: pointer;
-    }
-
-    .logout button:hover {
-        background: #b91c1c;
-    }
-
     main {
         margin-left: 280px;
         flex: 1;
@@ -157,22 +72,9 @@
     }
 
     @media (max-width: 768px) {
-        aside {
-            width: 220px;
-        }
-
         main {
             margin-left: 220px;
             padding: 24px;
-        }
-
-        .sidebar-header img {
-            width: 55px;
-            height: 55px;
-        }
-
-        .sidebar-header span {
-            font-size: 19px;
         }
 
         .titulo {
@@ -181,23 +83,9 @@
     }
 
     @media (max-width: 480px) {
-        aside {
-            width: 190px;
-        }
-
         main {
             margin-left: 190px;
             padding: 18px;
-        }
-
-        .sidebar-header {
-            flex-direction: column;
-            text-align: center;
-        }
-
-        .menu-modulo div {
-            font-size: 13px;
-            padding: 10px;
         }
 
         .titulo {
@@ -209,53 +97,7 @@
 
 <body>
 
-    <aside>
-        <div class="sidebar-header">
-            <img src="{{ asset('images/LogoFICCT (1).png') }}" alt="Logo">
-            <span>Logística<br>y Recursos</span>
-        </div>
-
-        <div class="menu-modulo">
-
-            <div onclick="window.location='{{ route('menu') }}'">
-                Volver al Dashboard
-            </div>
-
-            @php
-                $hasGestiones = \Illuminate\Support\Facades\DB::table('gestion')->exists();
-                $disableReportes = !$hasGestiones;
-            @endphp
-
-            <div onclick="window.location='{{ route('aulas.index') }}'"
-                class="{{ request()->routeIs('aulas.*') ? 'activo' : '' }}" style="cursor:pointer;">
-                CU08 - Gestionar Aulas
-            </div>
-            <div onclick="window.location='{{ route('docentes.index') }}'"
-                class="{{ request()->routeIs('docentes.*') ? 'activo' : '' }}"
-                style="cursor:pointer;">
-                CU09 - Gestionar Docentes
-            </div>
-            <div onclick="window.location='{{ route('especialidades.index') }}'"
-                class="{{ request()->routeIs('especialidades.*') ? 'activo' : '' }}"
-                style="cursor:pointer;">
-                Gestionar Especialidades
-            </div>
-            <div onclick="{{ $disableReportes ? '' : "window.location='" . route('reportes.index') . "'" }}"
-                class="{{ request()->routeIs('reportes.*') ? 'activo' : '' }} {{ $disableReportes ? 'deshabilitado' : '' }}"
-                style="cursor:pointer;"
-                title="{{ $disableReportes ? 'Requiere registrar previamente: Gestiones.' : '' }}">
-                CU18 - Generar Reportes
-            </div>
-
-        </div>
-
-        <div class="logout">
-            <form action="{{ route('logout') }}" method="POST">
-                @csrf
-                <button type="submit">Cerrar sesión</button>
-            </form>
-        </div>
-    </aside>
+    @include('components.sidebar')
 
     <main>
         @hasSection('content')
