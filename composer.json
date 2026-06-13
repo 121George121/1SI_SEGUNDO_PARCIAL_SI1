@@ -11,6 +11,7 @@
         "doctrine/dbal": "^4.4",
         "laravel/framework": "^13.8",
         "laravel/tinker": "^3.0",
+        "phpoffice/phpspreadsheet": "^5.8",
         "srmklive/paypal": "^3.1"
     },
     "require-dev": {

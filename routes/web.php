@@ -52,11 +52,13 @@ Route::prefix('usuarios')->middleware('auth')->group(function () {
     Route::get('/', [gestionarUsuariosyRolesController::class, 'index'])->name('usuarios.index');
     Route::get('/create', [gestionarUsuariosyRolesController::class, 'create'])->name('usuarios.create');
     Route::post('/store', [gestionarUsuariosyRolesController::class, 'store'])->name('usuarios.store');
+    Route::get('/descargar-plantilla', [gestionarUsuariosyRolesController::class, 'descargarPlantilla'])->name('usuarios.descargarPlantilla');
     Route::get('/{id}/edit', [gestionarUsuariosyRolesController::class, 'edit'])->name('usuarios.edit');
     Route::put('/{id}', [gestionarUsuariosyRolesController::class, 'update'])->name('usuarios.update');
     Route::delete('/{id}', [gestionarUsuariosyRolesController::class, 'destroy'])->name('usuarios.destroy');
     Route::get('/{id}/roles', [gestionarUsuariosyRolesController::class, 'mostrarAsignarRoles'])->name('usuarios.roles');
     Route::post('/{id}/roles', [gestionarUsuariosyRolesController::class, 'assignRoles'])->name('usuarios.roles.update');
+    Route::post('/importar-postulantes', [gestionarUsuariosyRolesController::class, 'importarPostulantes'])->name('usuarios.importarPostulantes');
 });
 
 Route::prefix('bitacora')->middleware('auth')->group(function () {
