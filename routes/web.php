@@ -23,6 +23,7 @@ use App\Http\Controllers\Gestion_Academica\gestionarEvaluacionesYNotasController
 use App\Http\Controllers\Gestion_Academica\gestionarPostulantesAGruposController;
 use App\Http\Controllers\Gestion_Academica\gestionarAdmisionFinalController;
 use App\Http\Controllers\Inscripcion_y_Documentacion\gestionarPreferenciaController;
+use App\Http\Controllers\Usuario_Seguridad_y_Auditoria\DocenteController;
 
 
 Route::get('/', function () {
@@ -351,6 +352,16 @@ Route::middleware(['auth', 'student'])->prefix('estudiante')->group(function () 
     Route::get('/pagar-matricula', [App\Http\Controllers\Usuario_Seguridad_y_Auditoria\EstudianteController::class, 'pagarMatricula'])->name('estudiante.pagar-matricula');
     Route::get('/boleta-inscripcion', [App\Http\Controllers\Usuario_Seguridad_y_Auditoria\EstudianteController::class, 'boletaInscripcion'])->name('estudiante.boleta-inscripcion');
 });
+
+// Rutas exclusivas del docente
+Route::middleware(['auth', 'docente'])->prefix('docente')->group(function () {
+    Route::get('/perfil', [DocenteController::class, 'perfil'])->name('docente.perfil');
+    Route::get('/materias', [DocenteController::class, 'materias'])->name('docente.materias');
+    Route::get('/grupos', [DocenteController::class, 'grupos'])->name('docente.grupos');
+    Route::get('/grupos/{grupo}/estudiantes', [DocenteController::class, 'estudiantesGrupo'])->name('docente.grupos.estudiantes');
+    Route::get('/notas', [DocenteController::class, 'notas'])->name('docente.notas');
+});
+
 
 
 

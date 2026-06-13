@@ -369,6 +369,10 @@ class autenticacionController extends Controller
             return redirect()->route('estudiante.perfil')->with('success', 'Bienvenido, '.$persona->nombre.' '.$persona->apellido.'.');
         }
 
+        if ($persona->tipo_Docente) {
+            return redirect()->route('docente.perfil')->with('success', 'Bienvenido, '.$persona->nombre.' '.$persona->apellido.'.');
+        }
+
         return redirect()->route('menu')->with('success', 'Bienvenido, '.$persona->nombre.' '.$persona->apellido.'.');
     }
 }

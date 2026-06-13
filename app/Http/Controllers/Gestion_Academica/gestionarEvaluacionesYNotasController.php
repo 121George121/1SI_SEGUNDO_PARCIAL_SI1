@@ -15,6 +15,9 @@ class gestionarEvaluacionesYNotasController extends Controller
             return $redirect;
         }
 
+        // Auto-crear evaluaciones 1, 2 y 3 para cada grupo_materia si no existen
+        $this->autoCrearEvaluacionesPendientes();
+
         $evaluaciones = DB::table('evaluacion as e')
             ->join('grupo as g', DB::raw('"g"."Id_grupo"'), '=', DB::raw('"e"."Id_grupo"'))
             ->join('materia as m', DB::raw('"m"."Id_materia"'), '=', DB::raw('"e"."Id_materia"'))
@@ -480,5 +483,37 @@ class gestionarEvaluacionesYNotasController extends Controller
             ]);
         }
         return null;
+    }
+
+    private function autoCrearEvaluacionesPendientes()
+    {
+        $gruposMaterias = DB::table('grupo_materia')->get();
+
+        foreach ($gruposMaterias as $gm) {
+            $evaluacionesEsperadas = [
+                ['numero' => 1, 'porc' => 30.00],
+                ['numero' => 2, 'porc' => 30.00],
+                ['numero' => 3, 'porc' => 40.00],
+            ];
+
+            foreach ($evaluacionesEsperadas as $ee) {
+                $existe = DB::table('evaluacion')
+                    ->where('Id_grupo', $gm->Id_grupo)
+                    ->where('Id_materia', $gm->Id_materia)
+                    ->where('numero_evaluacion', $ee['numero'])
+                    ->exists();
+
+                if (!$existe) {
+                    DB::table('evaluacion')->insert([
+                        'numero_evaluacion' => $ee['numero'],
+                        'porcentaje' => $ee['porc'],
+                        'fecha' => now()->toDateString(),
+                        'estado' => 'activo',
+                        'Id_grupo' => $gm->Id_grupo,
+                        'Id_materia' => $gm->Id_materia,
+                    ]);
+                }
+            }
+        }
     }
 }

@@ -68,11 +68,22 @@ class asignarDocentesAGruposYMateriasController extends Controller
             ->orderBy('nombre')
             ->get();
 
+        $docenteMaterias = DB::table('docente_especialidad as de')
+            ->join('especialidad as e', 'e.Id_especialidad', '=', 'de.Id_especialidad')
+            ->select('de.Id_docente as id_docente', 'e.id_materia')
+            ->get();
+
+        $existingAssignments = DB::table('grupo_materia')
+            ->select('Id_grupo as id_grupo', 'Id_materia as id_materia')
+            ->get();
+
         return view('Gestion_Academica.asignarDocentesAGruposYMaterias', compact(
             'asignaciones',
             'docentes',
             'grupos',
-            'materias'
+            'materias',
+            'docenteMaterias',
+            'existingAssignments'
         ));
     }
 
@@ -104,6 +115,8 @@ class asignarDocentesAGruposYMateriasController extends Controller
             'Id_materia' => $request->Id_materia,
             'Id_docente' => $request->Id_docente,
         ]);
+
+        $this->crearEvaluacionesAutomaticas($request->Id_grupo, $request->Id_materia);
 
         $this->registrarBitacora('Asignó docente a grupo y materia.');
 
@@ -147,6 +160,8 @@ class asignarDocentesAGruposYMateriasController extends Controller
                 'Id_materia' => $request->Id_materia,
                 'Id_docente' => $request->Id_docente,
             ]);
+
+        $this->crearEvaluacionesAutomaticas($request->Id_grupo, $request->Id_materia);
 
         $this->registrarBitacora('Actualizó asignación de docente a grupo y materia.');
 
@@ -478,6 +493,9 @@ class asignarDocentesAGruposYMateriasController extends Controller
 
             if (!empty($assignedDocente)) {
                 DB::table('grupo_materia')->insert($assignedDocente);
+                foreach ($assignedDocente as $ad) {
+                    $this->crearEvaluacionesAutomaticas($ad['Id_grupo'], $ad['Id_materia']);
+                }
             }
 
             $msg = "Asignación automática completada con éxito. Se asignaron {$successCount} materias/grupos.";
@@ -540,5 +558,26 @@ class asignarDocentesAGruposYMateriasController extends Controller
             ]);
         }
         return null;
+    }
+
+    private function crearEvaluacionesAutomaticas($idGrupo, $idMateria)
+    {
+        $evaluaciones = [
+            ['numero_evaluacion' => 1, 'porcentaje' => 30.00, 'fecha' => now()->toDateString(), 'estado' => 'activo', 'Id_grupo' => $idGrupo, 'Id_materia' => $idMateria],
+            ['numero_evaluacion' => 2, 'porcentaje' => 30.00, 'fecha' => now()->toDateString(), 'estado' => 'activo', 'Id_grupo' => $idGrupo, 'Id_materia' => $idMateria],
+            ['numero_evaluacion' => 3, 'porcentaje' => 40.00, 'fecha' => now()->toDateString(), 'estado' => 'activo', 'Id_grupo' => $idGrupo, 'Id_materia' => $idMateria],
+        ];
+
+        foreach ($evaluaciones as $eval) {
+            $existe = DB::table('evaluacion')
+                ->where('Id_grupo', $eval['Id_grupo'])
+                ->where('Id_materia', $eval['Id_materia'])
+                ->where('numero_evaluacion', $eval['numero_evaluacion'])
+                ->exists();
+
+            if (!$existe) {
+                DB::table('evaluacion')->insert($eval);
+            }
+        }
     }
 }

@@ -166,7 +166,7 @@
 
         <div class="form-group">
             <label>Grupo</label>
-            <select name="Id_grupo" required>
+            <select name="Id_grupo" id="reg_grupo" required>
                 <option value="">Seleccione grupo</option>
                 @foreach($grupos as $grupo)
                     <option value="{{ $grupo->id_grupo }}" {{ old('Id_grupo') == $grupo->id_grupo ? 'selected' : '' }}>
@@ -178,7 +178,7 @@
 
         <div class="form-group">
             <label>Materia</label>
-            <select name="Id_materia" required>
+            <select name="Id_materia" id="reg_materia" required>
                 <option value="">Seleccione materia</option>
                 @foreach($materias as $materia)
                     <option value="{{ $materia->id_materia }}" {{ old('Id_materia') == $materia->id_materia ? 'selected' : '' }}>
@@ -190,7 +190,7 @@
 
         <div class="form-group">
             <label>Docente</label>
-            <select name="Id_docente" required>
+            <select name="Id_docente" id="reg_docente" required>
                 <option value="">Seleccione docente</option>
                 @foreach($docentes as $docente)
                     <option value="{{ $docente->id_docente }}" {{ old('Id_docente') == $docente->id_docente ? 'selected' : '' }}>
@@ -310,6 +310,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // 1. Buscador de Asignaciones
     const buscador = document.getElementById('buscarAsignacion');
     const tabla = document.getElementById('tablaAsignaciones');
 
@@ -323,6 +324,95 @@ document.addEventListener('DOMContentLoaded', function () {
                 fila.style.display = contenido.includes(texto) ? '' : 'none';
             });
         });
+    }
+
+    // 2. Filtros Interactivos del Formulario de Registro Manual
+    const selectGrupo = document.getElementById('reg_grupo');
+    const selectMateria = document.getElementById('reg_materia');
+    const selectDocente = document.getElementById('reg_docente');
+
+    if (selectGrupo && selectMateria && selectDocente) {
+        const specialities = @json($docenteMaterias);
+        const existingAssignments = @json($existingAssignments);
+
+        function updateFormFilters() {
+            const valGrupo = selectGrupo.value;
+            const valMateria = selectMateria.value;
+            const valDocente = selectDocente.value;
+
+            // --- A. Filtrar GRUPOS ---
+            for (let i = 1; i < selectGrupo.options.length; i++) {
+                const opt = selectGrupo.options[i];
+                const gId = opt.value;
+                let allowed = true;
+
+                // Si hay materia seleccionada, el grupo no debe tener esa materia asignada
+                if (valMateria) {
+                    const isAssigned = existingAssignments.some(a => a.id_grupo == gId && a.id_materia == valMateria);
+                    if (isAssigned) allowed = false;
+                }
+
+                opt.disabled = !allowed;
+                opt.style.display = allowed ? '' : 'none';
+            }
+
+            // --- B. Filtrar MATERIAS ---
+            for (let i = 1; i < selectMateria.options.length; i++) {
+                const opt = selectMateria.options[i];
+                const mId = opt.value;
+                let allowed = true;
+
+                // El docente debe estar habilitado para la materia (si hay docente seleccionado)
+                if (valDocente) {
+                    const hasSpeciality = specialities.some(s => s.id_docente == valDocente && s.id_materia == mId);
+                    if (!hasSpeciality) allowed = false;
+                }
+
+                // El grupo seleccionado no debe tener esta materia registrada (si hay grupo seleccionado)
+                if (valGrupo) {
+                    const isAssigned = existingAssignments.some(a => a.id_grupo == valGrupo && a.id_materia == mId);
+                    if (isAssigned) allowed = false;
+                }
+
+                opt.disabled = !allowed;
+                opt.style.display = allowed ? '' : 'none';
+            }
+
+            // --- C. Filtrar DOCENTES ---
+            for (let i = 1; i < selectDocente.options.length; i++) {
+                const opt = selectDocente.options[i];
+                const dId = opt.value;
+                let allowed = true;
+
+                // El docente debe tener especialidad en la materia seleccionada (si hay materia seleccionada)
+                if (valMateria) {
+                    const hasSpeciality = specialities.some(s => s.id_docente == dId && s.id_materia == valMateria);
+                    if (!hasSpeciality) allowed = false;
+                }
+
+                opt.disabled = !allowed;
+                opt.style.display = allowed ? '' : 'none';
+            }
+
+            // Resetear valor si la opción seleccionada quedó deshabilitada
+            if (selectGrupo.selectedOptions[0] && selectGrupo.selectedOptions[0].disabled) {
+                selectGrupo.value = "";
+            }
+            if (selectMateria.selectedOptions[0] && selectMateria.selectedOptions[0].disabled) {
+                selectMateria.value = "";
+            }
+            if (selectDocente.selectedOptions[0] && selectDocente.selectedOptions[0].disabled) {
+                selectDocente.value = "";
+            }
+        }
+
+        // Registrar eventos
+        selectGrupo.addEventListener('change', updateFormFilters);
+        selectMateria.addEventListener('change', updateFormFilters);
+        selectDocente.addEventListener('change', updateFormFilters);
+
+        // Inicializar al cargar la página (por si hay valores previos del old())
+        updateFormFilters();
     }
 });
 </script>
