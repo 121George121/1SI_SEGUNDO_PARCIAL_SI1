@@ -1,9 +1,11 @@
 <script>
+// Initialize the state variable
+window.isSidebarCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
+
 // Apply persisted desktop collapse state immediately on load to prevent layout flicker
 (function() {
     if (window.innerWidth > 768) {
-        const isCollapsed = localStorage.getItem('sidebar-collapsed') === 'true';
-        if (isCollapsed) {
+        if (window.isSidebarCollapsed) {
             document.body.classList.add('sidebar-collapsed');
         }
     }
@@ -241,7 +243,8 @@
     box-shadow: 4px 0 25px rgba(15, 23, 42, 0.25);
     z-index: 999;
     border-right: 1px solid rgba(255,255,255,0.05);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-x: hidden;
 }
 
 .sidebar-header {
@@ -251,6 +254,7 @@
     border-bottom: 1px solid rgba(255,255,255,0.06);
     gap: 12px;
     background: rgba(255, 255, 255, 0.01);
+    transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), justify-content 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .sidebar-header img {
@@ -258,11 +262,14 @@
     height: 44px;
     object-fit: contain;
     filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
 }
 
 .header-text {
     display: flex;
     flex-direction: column;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
 }
 
 .title-main {
@@ -286,6 +293,7 @@
     flex: 1;
     overflow-y: auto;
     padding: 16px 12px;
+    transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Custom Scrollbar for Sidebar */
@@ -325,7 +333,9 @@
     background: transparent;
     cursor: pointer;
     text-align: left;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), justify-content 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 .menu-item:hover,
@@ -352,7 +362,7 @@
     stroke-width: 2.2;
     flex-shrink: 0;
     color: #64748b;
-    transition: color 0.2s;
+    transition: color 0.2s, margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .menu-item:hover .menu-icon,
@@ -377,14 +387,16 @@
 .header-left {
     display: flex;
     align-items: center;
+    overflow: hidden;
 }
 
 .chevron-icon {
     width: 14px;
     height: 14px;
     stroke-width: 2.5;
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s;
     color: #475569;
+    flex-shrink: 0;
 }
 
 .folder-container.abierto .chevron-icon {
@@ -395,7 +407,7 @@
 .folder-content {
     max-height: 0;
     overflow: hidden;
-    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), margin 0.3s, padding 0.3s;
     display: flex;
     flex-direction: column;
     padding-left: 14px;
@@ -420,6 +432,7 @@
     font-weight: 550;
     border-radius: 6px;
     transition: all 0.2s ease;
+    white-space: nowrap;
 }
 
 .sub-item:hover {
@@ -447,6 +460,7 @@
     padding: 20px 14px;
     border-top: 1px solid rgba(255,255,255,0.06);
     background: rgba(0, 0, 0, 0.08);
+    transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .logout form {
@@ -466,7 +480,9 @@
     font-weight: bold;
     font-size: 14px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), justify-content 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s;
+    overflow: hidden;
+    white-space: nowrap;
 }
 
 .logout button:hover {
@@ -481,15 +497,17 @@
     height: 16px;
     margin-right: 8px;
     stroke-width: 2.2;
+    flex-shrink: 0;
+    transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Sidebar Toggle Floating Button styling */
 .sidebar-toggle-btn {
     position: fixed;
     top: 20px;
-    left: 300px;
-    width: 40px;
-    height: 40px;
+    left: 265px; /* Aligned centered on the 280px border (280px - 15px) */
+    width: 30px;
+    height: 30px;
     background: #ffffff;
     color: #0f172a;
     border: 1px solid #e2e8f0;
@@ -499,8 +517,13 @@
     justify-content: center;
     cursor: pointer;
     box-shadow: 0 4px 14px rgba(0,0,0,0.08);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s, transform 0.2s;
     z-index: 1000;
+}
+
+.sidebar-toggle-btn svg {
+    width: 14px;
+    height: 14px;
 }
 
 .sidebar-toggle-btn:hover {
@@ -514,30 +537,108 @@
 .sidebar-toggle-btn .icon-open { display: none; }
 .sidebar-toggle-btn .icon-close { display: block; }
 
-/* Desktop collapsed layout modifications */
-body.sidebar-collapsed .sidebar-unified {
-    transform: translateX(-280px);
+/* ==========================================================================
+   DESKTOP COLLAPSED STATE (body.sidebar-collapsed)
+   ========================================================================== */
+@media (min-width: 769px) {
+    body.sidebar-collapsed .sidebar-unified {
+        width: 70px;
+    }
+
+    body.sidebar-collapsed main {
+        margin-left: 70px !important;
+    }
+
+    body.sidebar-collapsed .sidebar-toggle-btn {
+        left: 55px; /* Aligned centered on the 70px border (70px - 15px) */
+    }
+
+    body.sidebar-collapsed .sidebar-toggle-btn .icon-open { display: block; }
+    body.sidebar-collapsed .sidebar-toggle-btn .icon-close { display: none; }
+
+    /* Header adaptations */
+    body.sidebar-collapsed .sidebar-header {
+        justify-content: center;
+        padding: 24px 10px;
+    }
+
+    body.sidebar-collapsed .header-text {
+        opacity: 0;
+        visibility: hidden;
+        display: none !important;
+    }
+
+    /* Scroll area */
+    body.sidebar-collapsed .sidebar-scroll {
+        padding: 16px 8px;
+    }
+
+    /* Menu item centering and text removal */
+    body.sidebar-collapsed .menu-item,
+    body.sidebar-collapsed .folder-header {
+        justify-content: center;
+        padding: 12px 0;
+    }
+
+    body.sidebar-collapsed .menu-icon {
+        margin-right: 0;
+    }
+
+    body.sidebar-collapsed .menu-item span,
+    body.sidebar-collapsed .folder-header .header-left > span,
+    body.sidebar-collapsed .chevron-icon {
+        opacity: 0;
+        visibility: hidden;
+        display: none !important;
+    }
+
+    /* Hide submenus completely */
+    body.sidebar-collapsed .folder-content {
+        max-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+    }
+
+    /* Highlight header left border when folder contains active element */
+    body.sidebar-collapsed .menu-item.activo,
+    body.sidebar-collapsed .folder-activo-header {
+        border-left: 3px solid #ef4444;
+        border-right: 3px solid transparent;
+        background: rgba(220, 38, 38, 0.05) !important;
+    }
+
+    /* Centering Logout Button */
+    body.sidebar-collapsed .logout {
+        padding: 20px 10px;
+    }
+
+    body.sidebar-collapsed .logout button {
+        padding: 11px 0;
+        justify-content: center;
+    }
+
+    body.sidebar-collapsed .logout-icon {
+        margin-right: 0;
+    }
+
+    body.sidebar-collapsed .logout button span {
+        opacity: 0;
+        visibility: hidden;
+        display: none !important;
+    }
 }
 
-body.sidebar-collapsed main {
-    margin-left: 0 !important;
-}
-
-body.sidebar-collapsed .sidebar-toggle-btn {
-    left: 20px;
-}
-
-body.sidebar-collapsed .sidebar-toggle-btn .icon-open { display: block; }
-body.sidebar-collapsed .sidebar-toggle-btn .icon-close { display: none; }
-
-/* Smooth transitions for all elements */
+/* Smooth transitions for layout elements */
 .sidebar-unified,
 main,
 .sidebar-toggle-btn {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-/* Mobile responsive styles */
+/* ==========================================================================
+   MOBILE RESPONSIVE STATE
+   ========================================================================== */
 @media (max-width: 768px) {
     .sidebar-unified {
         transform: translateX(-280px);
@@ -558,10 +659,11 @@ main,
     /* When slide-in is open on mobile */
     body.sidebar-mobile-open .sidebar-unified {
         transform: translateX(0);
+        width: 280px;
     }
     
     body.sidebar-mobile-open .sidebar-toggle-btn {
-        left: 300px;
+        left: 265px; /* Centered on the 280px drawer border (280px - 15px) */
     }
     
     body.sidebar-mobile-open .sidebar-toggle-btn .icon-open { display: none; }
@@ -588,21 +690,18 @@ main,
 <script>
 // Toggle collapse and expand behavior for sidebar folders
 function toggleFolder(button) {
-    const container = button.closest('.folder-container');
-    const wasOpen = container.classList.contains('abierto');
-    
-    // Optional: Collapse all other folders for accordion effect
-    document.querySelectorAll('.folder-container').forEach(folder => {
-        if (folder !== container) {
-            folder.classList.remove('abierto');
-        }
-    });
-
-    if (wasOpen) {
-        container.classList.remove('abierto');
-    } else {
+    if (window.isSidebarCollapsed) {
+        // First, expand the sidebar
+        toggleSidebar();
+        
+        // Then, expand the clicked folder
+        const container = button.closest('.folder-container');
         container.classList.add('abierto');
+        return;
     }
+
+    const container = button.closest('.folder-container');
+    container.classList.toggle('abierto');
 }
 
 // Toggle sidebar open/closed
@@ -610,6 +709,7 @@ function toggleSidebar() {
     if (window.innerWidth > 768) {
         // Desktop collapse toggle
         const isCollapsed = document.body.classList.toggle('sidebar-collapsed');
+        window.isSidebarCollapsed = isCollapsed;
         localStorage.setItem('sidebar-collapsed', isCollapsed ? 'true' : 'false');
     } else {
         // Mobile menu drawer toggle

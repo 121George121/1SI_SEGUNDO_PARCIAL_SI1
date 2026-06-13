@@ -33,7 +33,10 @@ class gestionarUsuariosyRolesController extends Controller
         return view('Usuario_Seguridad_y_Auditoria.FormularioUsuario', [
             'usuario' => null,
             'rolesDisponibles' => self::ROLES,
+            'superadministrador' => null,
             'administrador' => null,
+            'docente' => null,
+            'postulante' => null,
         ]);
     }
 
@@ -55,13 +58,49 @@ class gestionarUsuariosyRolesController extends Controller
                 ...$this->rolesDesdeRequest($request),
             ], 'Id_persona');
 
-            if ($this->esAdministradorOSuperadministrador($request)) {
+            $roles = $request->input('roles', []);
+
+            // 1. Superadministrador
+            if (in_array('tipo_Superadministrador', $roles, true)) {
+                DB::table('superadministrador')->updateOrInsert(
+                    ['Id_superadministrador' => $personaId],
+                    [
+                        'cargo' => $request->cargo_superadmin,
+                        'estado' => $request->estado_superadmin ?? 'activo',
+                    ]
+                );
+            }
+
+            // 2. Administrador
+            if (in_array('tipo_Administrador', $roles, true)) {
                 DB::table('administrador')->updateOrInsert(
                     ['Id_administrador' => $personaId],
                     [
                         'cargo' => $request->cargo,
                         'area' => $request->area,
                         'estado' => $request->estado_administrador ?? 'activo',
+                    ]
+                );
+            }
+
+            // 3. Docente
+            if (in_array('tipo_Docente', $roles, true)) {
+                DB::table('docente')->updateOrInsert(
+                    ['Id_docente' => $personaId],
+                    [
+                        'anio_servicio' => $request->anio_servicio,
+                        'estado' => $request->estado_docente ?? 'activo',
+                    ]
+                );
+            }
+
+            // 4. Postulante
+            if (in_array('tipo_Postulante', $roles, true)) {
+                DB::table('postulante')->updateOrInsert(
+                    ['Id_postulante' => $personaId],
+                    [
+                        'estado_inscripcion' => $request->estado_inscripcion ?? 'En_Revision',
+                        'fecha_registro' => $request->fecha_registro ?? now()->toDateString(),
                     ]
                 );
             }
@@ -86,18 +125,36 @@ class gestionarUsuariosyRolesController extends Controller
     {
         $usuario = gestionarUsuariosyRoles::with('persona')->findOrFail($id);
 
+        $superadministrador = null;
         $administrador = null;
+        $docente = null;
+        $postulante = null;
 
         if ($usuario->Id_persona) {
+            $superadministrador = DB::table('superadministrador')
+                ->where('Id_superadministrador', $usuario->Id_persona)
+                ->first();
+
             $administrador = DB::table('administrador')
                 ->where('Id_administrador', $usuario->Id_persona)
+                ->first();
+
+            $docente = DB::table('docente')
+                ->where('Id_docente', $usuario->Id_persona)
+                ->first();
+
+            $postulante = DB::table('postulante')
+                ->where('Id_postulante', $usuario->Id_persona)
                 ->first();
         }
 
         return view('Usuario_Seguridad_y_Auditoria.FormularioUsuario', [
             'usuario' => $usuario,
             'rolesDisponibles' => self::ROLES,
+            'superadministrador' => $superadministrador,
             'administrador' => $administrador,
+            'docente' => $docente,
+            'postulante' => $postulante,
         ]);
     }
 
@@ -120,7 +177,25 @@ class gestionarUsuariosyRolesController extends Controller
                 ...$this->rolesDesdeRequest($request),
             ]);
 
-            if ($this->esAdministradorOSuperadministrador($request)) {
+            $roles = $request->input('roles', []);
+
+            // 1. Superadministrador
+            if (in_array('tipo_Superadministrador', $roles, true)) {
+                DB::table('superadministrador')->updateOrInsert(
+                    ['Id_superadministrador' => $usuario->Id_persona],
+                    [
+                        'cargo' => $request->cargo_superadmin,
+                        'estado' => $request->estado_superadmin ?? 'activo',
+                    ]
+                );
+            } else {
+                DB::table('superadministrador')
+                    ->where('Id_superadministrador', $usuario->Id_persona)
+                    ->update(['estado' => 'inactivo']);
+            }
+
+            // 2. Administrador
+            if (in_array('tipo_Administrador', $roles, true)) {
                 DB::table('administrador')->updateOrInsert(
                     ['Id_administrador' => $usuario->Id_persona],
                     [
@@ -132,9 +207,37 @@ class gestionarUsuariosyRolesController extends Controller
             } else {
                 DB::table('administrador')
                     ->where('Id_administrador', $usuario->Id_persona)
-                    ->update([
-                        'estado' => 'inactivo',
-                    ]);
+                    ->update(['estado' => 'inactivo']);
+            }
+
+            // 3. Docente
+            if (in_array('tipo_Docente', $roles, true)) {
+                DB::table('docente')->updateOrInsert(
+                    ['Id_docente' => $usuario->Id_persona],
+                    [
+                        'anio_servicio' => $request->anio_servicio,
+                        'estado' => $request->estado_docente ?? 'activo',
+                    ]
+                );
+            } else {
+                DB::table('docente')
+                    ->where('Id_docente', $usuario->Id_persona)
+                    ->update(['estado' => 'inactivo']);
+            }
+
+            // 4. Postulante
+            if (in_array('tipo_Postulante', $roles, true)) {
+                DB::table('postulante')->updateOrInsert(
+                    ['Id_postulante' => $usuario->Id_persona],
+                    [
+                        'estado_inscripcion' => $request->estado_inscripcion ?? 'En_Revision',
+                        'fecha_registro' => $request->fecha_registro ?? now()->toDateString(),
+                    ]
+                );
+            } else {
+                DB::table('postulante')
+                    ->where('Id_postulante', $usuario->Id_persona)
+                    ->update(['estado_inscripcion' => 'inactivo']);
             }
 
             $datosUsuario = [
@@ -203,30 +306,66 @@ class gestionarUsuariosyRolesController extends Controller
     public function assignRoles(Request $request, int $id): RedirectResponse
     {
         $request->validate([
-            'roles' => ['required', 'array', 'min:1'],
-            'roles.*' => ['in:'.implode(',', array_keys(self::ROLES))],
+            'rol' => ['required', 'string', 'in:'.implode(',', array_keys(self::ROLES))],
         ], [
-            'roles.required' => 'Debes seleccionar al menos un rol.',
+            'rol.required' => 'Debes seleccionar un rol.',
         ]);
 
         $usuario = gestionarUsuariosyRoles::with('persona')->findOrFail($id);
 
-        $usuario->persona->update($this->rolesDesdeRequest($request));
+        DB::transaction(function () use ($request, $usuario): void {
+            $usuario->persona->update($this->rolesDesdeRequest($request));
 
-        if ($this->esAdministradorOSuperadministrador($request)) {
-            DB::table('administrador')->updateOrInsert(
-                ['Id_administrador' => $usuario->Id_persona],
-                [
-                    'estado' => 'activo',
-                ]
-            );
-        } else {
-            DB::table('administrador')
-                ->where('Id_administrador', $usuario->Id_persona)
-                ->update([
-                    'estado' => 'inactivo',
-                ]);
-        }
+            $rolSeleccionado = $request->input('rol');
+
+            // 1. Superadministrador
+            if ($rolSeleccionado === 'tipo_Superadministrador') {
+                DB::table('superadministrador')->updateOrInsert(
+                    ['Id_superadministrador' => $usuario->Id_persona],
+                    ['estado' => 'activo']
+                );
+            } else {
+                DB::table('superadministrador')
+                    ->where('Id_superadministrador', $usuario->Id_persona)
+                    ->update(['estado' => 'inactivo']);
+            }
+
+            // 2. Administrador
+            if ($rolSeleccionado === 'tipo_Administrador') {
+                DB::table('administrador')->updateOrInsert(
+                    ['Id_administrador' => $usuario->Id_persona],
+                    ['estado' => 'activo']
+                );
+            } else {
+                DB::table('administrador')
+                    ->where('Id_administrador', $usuario->Id_persona)
+                    ->update(['estado' => 'inactivo']);
+            }
+
+            // 3. Docente
+            if ($rolSeleccionado === 'tipo_Docente') {
+                DB::table('docente')->updateOrInsert(
+                    ['Id_docente' => $usuario->Id_persona],
+                    ['estado' => 'activo']
+                );
+            } else {
+                DB::table('docente')
+                    ->where('Id_docente', $usuario->Id_persona)
+                    ->update(['estado' => 'inactivo']);
+            }
+
+            // 4. Postulante
+            if ($rolSeleccionado === 'tipo_Postulante') {
+                DB::table('postulante')->updateOrInsert(
+                    ['Id_postulante' => $usuario->Id_persona],
+                    ['estado_inscripcion' => 'En_Revision']
+                );
+            } else {
+                DB::table('postulante')
+                    ->where('Id_postulante', $usuario->Id_persona)
+                    ->update(['estado_inscripcion' => 'inactivo']);
+            }
+        });
 
         $this->registrarBitacora('Roles actualizados para: '.$usuario->nombre_usuario);
 
@@ -247,16 +386,25 @@ class gestionarUsuariosyRolesController extends Controller
             'telefono' => ['nullable', 'string', 'max:20'],
             'direccion' => ['nullable', 'string'],
             'estado' => ['nullable', 'in:activo,inactivo'],
-            'cargo' => ['nullable', 'string', 'max:100'],
-            'area' => ['nullable', 'string', 'max:100'],
-            'estado_administrador' => ['nullable', 'in:activo,inactivo'],
             'roles' => ['required', 'array', 'min:1'],
             'roles.*' => ['in:'.implode(',', array_keys(self::ROLES))],
         ];
 
-        if ($this->esAdministradorOSuperadministrador($request)) {
+        $roles = $request->input('roles', []);
+
+        if (in_array('tipo_Superadministrador', $roles, true)) {
+            $reglas['cargo_superadmin'] = ['required', 'string', 'max:100'];
+        }
+        if (in_array('tipo_Administrador', $roles, true)) {
             $reglas['cargo'] = ['required', 'string', 'max:100'];
             $reglas['area'] = ['required', 'string', 'max:100'];
+        }
+        if (in_array('tipo_Docente', $roles, true)) {
+            $reglas['anio_servicio'] = ['required', 'integer', 'min:0'];
+        }
+        if (in_array('tipo_Postulante', $roles, true)) {
+            $reglas['estado_inscripcion'] = ['required', 'string', 'max:20'];
+            $reglas['fecha_registro'] = ['required', 'date'];
         }
 
         if ($esNuevo) {
@@ -296,29 +444,34 @@ class gestionarUsuariosyRolesController extends Controller
         return $request->validate($reglas, [
             'contrasena.regex' => 'La contraseña debe tener mayúsculas, minúsculas, números y caracteres especiales.',
             'roles.required' => 'Debes seleccionar al menos un rol.',
-            'cargo.required' => 'El cargo es obligatorio para Administrador o Superadministrador.',
-            'area.required' => 'El área es obligatoria para Administrador o Superadministrador.',
+            'cargo_superadmin.required' => 'El cargo es obligatorio para Superadministrador.',
+            'cargo.required' => 'El cargo es obligatorio para Administrador.',
+            'area.required' => 'El área es obligatoria para Administrador.',
+            'anio_servicio.required' => 'Los años de servicio son obligatorios para Docente.',
+            'anio_servicio.integer' => 'Los años de servicio deben ser un número entero.',
+            'estado_inscripcion.required' => 'El estado de inscripción es obligatorio para Postulante.',
+            'fecha_registro.required' => 'La fecha de registro es obligatoria para Postulante.',
         ]);
     }
 
     private function rolesDesdeRequest(Request $request): array
     {
-        $roles = $request->input('roles', []);
+        $rolSeleccionado = $request->input('rol');
 
         return [
-            'tipo_Superadministrador' => in_array('tipo_Superadministrador', $roles, true),
-            'tipo_Administrador' => in_array('tipo_Administrador', $roles, true),
-            'tipo_Docente' => in_array('tipo_Docente', $roles, true),
-            'tipo_Postulante' => in_array('tipo_Postulante', $roles, true),
+            'tipo_Superadministrador' => $rolSeleccionado === 'tipo_Superadministrador',
+            'tipo_Administrador' => $rolSeleccionado === 'tipo_Administrador',
+            'tipo_Docente' => $rolSeleccionado === 'tipo_Docente',
+            'tipo_Postulante' => $rolSeleccionado === 'tipo_Postulante',
         ];
     }
 
     private function esAdministradorOSuperadministrador(Request $request): bool
     {
-        $roles = $request->input('roles', []);
+        $rolSeleccionado = $request->input('rol');
 
-        return in_array('tipo_Administrador', $roles, true)
-            || in_array('tipo_Superadministrador', $roles, true);
+        return $rolSeleccionado === 'tipo_Administrador'
+            || $rolSeleccionado === 'tipo_Superadministrador';
     }
 
     private function registrarBitacora(string $descripcion): void

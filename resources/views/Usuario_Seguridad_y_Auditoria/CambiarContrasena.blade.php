@@ -21,6 +21,35 @@
         .requirements li { margin-bottom: 6px; display: flex; align-items: center; gap: 6px; transition: color 0.2s; }
         .req-invalid { color: #dc2626; }
         .req-valid { color: #16a34a; }
+        .password-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        .password-wrapper input {
+            padding-right: 44px !important;
+            margin: 8px 0 14px !important;
+        }
+        .btn-toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 45%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            padding: 0;
+            z-index: 10;
+            width: auto !important;
+            height: auto !important;
+        }
+        .btn-toggle-password svg {
+            width: 20px;
+            height: 20px;
+            stroke-width: 2;
+        }
     </style>
 </head>
 <body>
@@ -41,7 +70,18 @@
                 @csrf
 
                 <label for="contrasena" style="font-weight: bold; color: #0b2d6b; font-size: 14px;">Nueva contraseña</label>
-                <input type="password" id="contrasena" name="contrasena" required autofocus placeholder="Ingresa tu contraseña">
+                <div class="password-wrapper">
+                    <input type="password" id="contrasena" name="contrasena" required autofocus placeholder="Ingresa tu contraseña">
+                    <button type="button" class="btn-toggle-password" onclick="toggleAllPasswords()">
+                        <svg class="eye-open" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        <svg class="eye-closed" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="display: none;">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a10.024 10.024 0 014.168-5.117m1.96-1.785A9.964 9.964 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.071m-4.005-1.956A3.375 3.375 0 0012 9.75M9 9l6 6M3 3l18 18" />
+                        </svg>
+                    </button>
+                </div>
 
                 <!-- Lista de Requerimientos de Contraseña -->
                 <ul class="requirements">
@@ -144,6 +184,28 @@
             password.addEventListener('input', validador);
             confirmPassword.addEventListener('input', validador);
         });
+
+        // Toggle All Passwords simultaneously (Single Eye Toggle)
+        function toggleAllPasswords() {
+            const password = document.getElementById('contrasena');
+            const confirmPassword = document.getElementById('contrasena_confirmation');
+            const wrapper = password.closest('.password-wrapper');
+            const eyeOpen = wrapper.querySelector('.eye-open');
+            const eyeClosed = wrapper.querySelector('.eye-closed');
+            
+            const newType = password.type === 'password' ? 'text' : 'password';
+            
+            password.type = newType;
+            confirmPassword.type = newType;
+            
+            if (newType === 'text') {
+                eyeOpen.style.display = 'none';
+                eyeClosed.style.display = 'block';
+            } else {
+                eyeOpen.style.display = 'block';
+                eyeClosed.style.display = 'none';
+            }
+        }
     </script>
 </body>
 </html>
