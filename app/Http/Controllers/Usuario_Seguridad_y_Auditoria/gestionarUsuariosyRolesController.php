@@ -58,10 +58,10 @@ class gestionarUsuariosyRolesController extends Controller
                 ...$this->rolesDesdeRequest($request),
             ], 'Id_persona');
 
-            $roles = $request->input('roles', []);
+            $rol = $request->input('rol');
 
             // 1. Superadministrador
-            if (in_array('tipo_Superadministrador', $roles, true)) {
+            if ($rol === 'tipo_Superadministrador') {
                 DB::table('superadministrador')->updateOrInsert(
                     ['Id_superadministrador' => $personaId],
                     [
@@ -72,7 +72,7 @@ class gestionarUsuariosyRolesController extends Controller
             }
 
             // 2. Administrador
-            if (in_array('tipo_Administrador', $roles, true)) {
+            if ($rol === 'tipo_Administrador') {
                 DB::table('administrador')->updateOrInsert(
                     ['Id_administrador' => $personaId],
                     [
@@ -84,7 +84,7 @@ class gestionarUsuariosyRolesController extends Controller
             }
 
             // 3. Docente
-            if (in_array('tipo_Docente', $roles, true)) {
+            if ($rol === 'tipo_Docente') {
                 DB::table('docente')->updateOrInsert(
                     ['Id_docente' => $personaId],
                     [
@@ -95,7 +95,7 @@ class gestionarUsuariosyRolesController extends Controller
             }
 
             // 4. Postulante
-            if (in_array('tipo_Postulante', $roles, true)) {
+            if ($rol === 'tipo_Postulante') {
                 DB::table('postulante')->updateOrInsert(
                     ['Id_postulante' => $personaId],
                     [
@@ -177,10 +177,10 @@ class gestionarUsuariosyRolesController extends Controller
                 ...$this->rolesDesdeRequest($request),
             ]);
 
-            $roles = $request->input('roles', []);
+            $rol = $request->input('rol');
 
             // 1. Superadministrador
-            if (in_array('tipo_Superadministrador', $roles, true)) {
+            if ($rol === 'tipo_Superadministrador') {
                 DB::table('superadministrador')->updateOrInsert(
                     ['Id_superadministrador' => $usuario->Id_persona],
                     [
@@ -195,7 +195,7 @@ class gestionarUsuariosyRolesController extends Controller
             }
 
             // 2. Administrador
-            if (in_array('tipo_Administrador', $roles, true)) {
+            if ($rol === 'tipo_Administrador') {
                 DB::table('administrador')->updateOrInsert(
                     ['Id_administrador' => $usuario->Id_persona],
                     [
@@ -211,7 +211,7 @@ class gestionarUsuariosyRolesController extends Controller
             }
 
             // 3. Docente
-            if (in_array('tipo_Docente', $roles, true)) {
+            if ($rol === 'tipo_Docente') {
                 DB::table('docente')->updateOrInsert(
                     ['Id_docente' => $usuario->Id_persona],
                     [
@@ -226,7 +226,7 @@ class gestionarUsuariosyRolesController extends Controller
             }
 
             // 4. Postulante
-            if (in_array('tipo_Postulante', $roles, true)) {
+            if ($rol === 'tipo_Postulante') {
                 DB::table('postulante')->updateOrInsert(
                     ['Id_postulante' => $usuario->Id_persona],
                     [
@@ -386,23 +386,22 @@ class gestionarUsuariosyRolesController extends Controller
             'telefono' => ['nullable', 'string', 'max:20'],
             'direccion' => ['nullable', 'string'],
             'estado' => ['nullable', 'in:activo,inactivo'],
-            'roles' => ['required', 'array', 'min:1'],
-            'roles.*' => ['in:'.implode(',', array_keys(self::ROLES))],
+            'rol' => ['required', 'string', 'in:'.implode(',', array_keys(self::ROLES))],
         ];
 
-        $roles = $request->input('roles', []);
+        $rol = $request->input('rol');
 
-        if (in_array('tipo_Superadministrador', $roles, true)) {
+        if ($rol === 'tipo_Superadministrador') {
             $reglas['cargo_superadmin'] = ['required', 'string', 'max:100'];
         }
-        if (in_array('tipo_Administrador', $roles, true)) {
+        if ($rol === 'tipo_Administrador') {
             $reglas['cargo'] = ['required', 'string', 'max:100'];
             $reglas['area'] = ['required', 'string', 'max:100'];
         }
-        if (in_array('tipo_Docente', $roles, true)) {
+        if ($rol === 'tipo_Docente') {
             $reglas['anio_servicio'] = ['required', 'integer', 'min:0'];
         }
-        if (in_array('tipo_Postulante', $roles, true)) {
+        if ($rol === 'tipo_Postulante') {
             $reglas['estado_inscripcion'] = ['required', 'string', 'max:20'];
             $reglas['fecha_registro'] = ['required', 'date'];
         }
@@ -443,7 +442,7 @@ class gestionarUsuariosyRolesController extends Controller
 
         return $request->validate($reglas, [
             'contrasena.regex' => 'La contraseña debe tener mayúsculas, minúsculas, números y caracteres especiales.',
-            'roles.required' => 'Debes seleccionar al menos un rol.',
+            'rol.required' => 'Debes seleccionar un rol.',
             'cargo_superadmin.required' => 'El cargo es obligatorio para Superadministrador.',
             'cargo.required' => 'El cargo es obligatorio para Administrador.',
             'area.required' => 'El área es obligatoria para Administrador.',

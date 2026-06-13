@@ -5,11 +5,12 @@
 @section('content')
 @php
     $persona = $usuario->persona;
-    $rolesActuales = [];
+    $rolActual = null;
     if ($persona) {
         foreach ($rolesDisponibles as $campo => $nombre) {
             if ($persona->{$campo}) {
-                $rolesActuales[] = $campo;
+                $rolActual = $campo;
+                break;
             }
         }
     }
@@ -26,9 +27,9 @@
     @csrf
 
     @foreach($rolesDisponibles as $campo => $nombre)
-        <label style="display:block;margin-bottom:10px;">
-            <input type="checkbox" name="roles[]" value="{{ $campo }}"
-                @checked(in_array($campo, old('roles', $rolesActuales), true))>
+        <label style="display:block;margin-bottom:10px; cursor:pointer;">
+            <input type="radio" name="rol" value="{{ $campo }}"
+                @checked(old('rol', $rolActual) === $campo)>
             {{ $nombre }}
         </label>
     @endforeach

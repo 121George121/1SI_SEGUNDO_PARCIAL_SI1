@@ -8,12 +8,13 @@
     $persona = $usuario?->persona;
     $administrador = $administrador ?? null;
 
-    $rolesActuales = [];
+    $rolActual = null;
 
     if ($persona) {
         foreach ($rolesDisponibles as $campo => $nombre) {
             if ($persona->{$campo}) {
-                $rolesActuales[] = $campo;
+                $rolActual = $campo;
+                break;
             }
         }
     }
@@ -145,6 +146,7 @@
         background: #f1f5f9;
         border-color: #cbd5e1;
     }
+    .role-option input[type="radio"],
     .role-option input[type="checkbox"] {
         width: 18px;
         height: 18px;
@@ -386,11 +388,11 @@
 
         <!-- Card 3: Roles -->
         <div class="form-card">
-            <h3>Roles Asignados</h3>
+            <h3>Rol Asignado</h3>
             <div class="roles-grid">
                 @foreach($rolesDisponibles as $campo => $nombre)
                     <label class="role-option">
-                        <input type="checkbox" name="roles[]" value="{{ $campo }}" @checked(in_array($campo, old('roles', $rolesActuales), true))>
+                        <input type="radio" name="rol" value="{{ $campo }}" @checked(old('rol', $rolActual) === $campo)>
                         <span>{{ $nombre }}</span>
                     </label>
                 @endforeach
@@ -531,19 +533,17 @@ document.addEventListener('DOMContentLoaded', function () {
     const camposPostulante = document.getElementById('camposPostulante');
 
     function verificarRoles() {
-        const superadmin = document.querySelector('input[name="roles[]"][value="tipo_Superadministrador"]');
-        const admin = document.querySelector('input[name="roles[]"][value="tipo_Administrador"]');
-        const docente = document.querySelector('input[name="roles[]"][value="tipo_Docente"]');
-        const postulante = document.querySelector('input[name="roles[]"][value="tipo_Postulante"]');
+        const selectedRol = document.querySelector('input[name="rol"]:checked');
+        const val = selectedRol ? selectedRol.value : null;
 
-        camposSuperadministrador.style.display = (superadmin && superadmin.checked) ? 'block' : 'none';
-        camposAdministrador.style.display = (admin && admin.checked) ? 'block' : 'none';
-        camposDocente.style.display = (docente && docente.checked) ? 'block' : 'none';
-        camposPostulante.style.display = (postulante && postulante.checked) ? 'block' : 'none';
+        camposSuperadministrador.style.display = (val === 'tipo_Superadministrador') ? 'block' : 'none';
+        camposAdministrador.style.display = (val === 'tipo_Administrador') ? 'block' : 'none';
+        camposDocente.style.display = (val === 'tipo_Docente') ? 'block' : 'none';
+        camposPostulante.style.display = (val === 'tipo_Postulante') ? 'block' : 'none';
     }
 
-    document.querySelectorAll('input[name="roles[]"]').forEach(function (checkbox) {
-        checkbox.addEventListener('change', verificarRoles);
+    document.querySelectorAll('input[name="rol"]').forEach(function (radio) {
+        radio.addEventListener('change', verificarRoles);
     });
 
     verificarRoles();
