@@ -235,6 +235,11 @@
                 style="cursor:pointer;">
                 CU09 - Gestionar Docentes
             </div>
+            <div onclick="window.location='{{ route('especialidades.index') }}'"
+                class="{{ request()->routeIs('especialidades.*') ? 'activo' : '' }}"
+                style="cursor:pointer;">
+                Gestionar Especialidades
+            </div>
             <div onclick="{{ $disableReportes ? '' : "window.location='" . route('reportes.index') . "'" }}"
                 class="{{ request()->routeIs('reportes.*') ? 'activo' : '' }} {{ $disableReportes ? 'deshabilitado' : '' }}"
                 style="cursor:pointer;"

@@ -20,6 +20,32 @@ class gestionarPagosController extends Controller
             return $redirect;
         }
 
+        // Sincronizar de forma automática conceptos de pago activos con todas las inscripciones
+        $pagosActivos = DB::table('pago')
+            ->whereRaw("LOWER(TRIM(estado_pago)) = 'activo'")
+            ->get();
+
+        $inscripciones = DB::table('inscripcion')->select('Codigo_inscripcion')->get();
+
+        foreach ($pagosActivos as $p) {
+            foreach ($inscripciones as $ins) {
+                $existe = DB::table('pago_inscripcion')
+                    ->where('Codigo_inscripcion', $ins->Codigo_inscripcion)
+                    ->where('Id_pago', $p->Id_pago)
+                    ->exists();
+
+                if (!$existe) {
+                    DB::table('pago_inscripcion')->insert([
+                        'Id_pago' => $p->Id_pago,
+                        'Codigo_inscripcion' => $ins->Codigo_inscripcion,
+                        'estado_pago_inscripcion' => 'Pendiente',
+                        'fecha_pago' => null,
+                        'Id_comprobante' => null,
+                    ]);
+                }
+            }
+        }
+
         // Obtener conceptos globales de pago (guardados en la tabla 'pago')
         $pagos = DB::table('pago')
             ->select(
@@ -107,17 +133,42 @@ class gestionarPagosController extends Controller
             'observaciones' => 'nullable|string',
         ]);
 
-        DB::table('pago')->insert([
-            'concepto_pago' => $request->concepto_pago,
-            'monto' => $request->monto,
-            'estado_pago' => $request->estado_pago,
-            'observaciones' => $request->observaciones,
-        ]);
+        DB::beginTransaction();
 
-        $this->registrarBitacora('Generó concepto de pago: ' . $request->concepto_pago);
+        try {
+            $idPago = DB::table('pago')->insertGetId([
+                'concepto_pago' => $request->concepto_pago,
+                'monto' => $request->monto,
+                'estado_pago' => $request->estado_pago,
+                'observaciones' => $request->observaciones,
+            ]);
 
-        return redirect()->route('pagos.index')
-            ->with('success', 'Concepto de pago generado correctamente.');
+            // Asignar automáticamente a todos los postulantes (inscripciones)
+            $inscripciones = DB::table('inscripcion')->select('Codigo_inscripcion')->get();
+            foreach ($inscripciones as $ins) {
+                DB::table('pago_inscripcion')->insert([
+                    'Id_pago' => $idPago,
+                    'Codigo_inscripcion' => $ins->Codigo_inscripcion,
+                    'estado_pago_inscripcion' => 'Pendiente',
+                    'fecha_pago' => null,
+                    'Id_comprobante' => null,
+                ]);
+            }
+
+            $this->registrarBitacora('Generó concepto de pago: ' . $request->concepto_pago . ' y lo asignó automáticamente a todos los postulantes.');
+
+            DB::commit();
+
+            return redirect()->route('pagos.index')
+                ->with('success', 'Concepto de pago generado y asignado automáticamente a todos los postulantes.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()->withErrors([
+                'error' => 'Error al generar y asignar el concepto de pago: ' . $e->getMessage()
+            ]);
+        }
     }
 
     public function update(Request $request, $id)
@@ -177,79 +228,7 @@ class gestionarPagosController extends Controller
         }
     }
 
-    public function asignarPago(Request $request)
-    {
-        if ($redirect = $this->validarPrerrequisitos()) {
-            return $redirect;
-        }
 
-        $request->validate([
-            'Id_pago' => 'required|exists:pago,Id_pago',
-            'Codigo_inscripcion' => 'nullable|exists:inscripcion,Codigo_inscripcion',
-        ]);
-
-        $idPagoTemplate = $request->Id_pago;
-        
-        $template = DB::table('pago')->where('Id_pago', $idPagoTemplate)->first();
-
-        if ($request->has('asignar_todos') && $request->asignar_todos == '1') {
-            $inscripciones = DB::table('inscripcion')->select('Codigo_inscripcion')->get();
-            $creados = 0;
-
-            foreach ($inscripciones as $ins) {
-                $existe = DB::table('pago_inscripcion')
-                    ->where('Codigo_inscripcion', $ins->Codigo_inscripcion)
-                    ->where('Id_pago', $idPagoTemplate)
-                    ->exists();
-
-                if (!$existe) {
-                    DB::table('pago_inscripcion')->insert([
-                        'Id_pago' => $idPagoTemplate,
-                        'Codigo_inscripcion' => $ins->Codigo_inscripcion,
-                        'estado_pago_inscripcion' => 'Pendiente',
-                        'fecha_pago' => null,
-                        'Id_comprobante' => null,
-                    ]);
-                    $creados++;
-                }
-            }
-
-            $this->registrarBitacora('Asignó concepto "' . $template->concepto_pago . '" a todos los postulantes (' . $creados . ' asignados).');
-
-            return redirect()->route('pagos.index')
-                ->with('success', 'Concepto de pago asignado correctamente a ' . $creados . ' postulantes.');
-        } else {
-            if (!$request->filled('Codigo_inscripcion')) {
-                return back()->withErrors(['error' => 'Debe seleccionar un postulante para la asignación individual.'])->withInput();
-            }
-
-            $codigoInscripcion = $request->Codigo_inscripcion;
-
-            $existe = DB::table('pago_inscripcion')
-                ->where('Codigo_inscripcion', $codigoInscripcion)
-                ->where('Id_pago', $idPagoTemplate)
-                ->exists();
-
-            if ($existe) {
-                return back()->withErrors([
-                    'error' => 'Ese concepto de pago ya fue asignado a esta inscripción.'
-                ])->withInput();
-            }
-
-            DB::table('pago_inscripcion')->insert([
-                'Id_pago' => $idPagoTemplate,
-                'Codigo_inscripcion' => $codigoInscripcion,
-                'estado_pago_inscripcion' => 'Pendiente',
-                'fecha_pago' => null,
-                'Id_comprobante' => null,
-            ]);
-
-            $this->registrarBitacora('Asignó pago ID ' . $idPagoTemplate . ' a inscripción ' . $codigoInscripcion);
-
-            return redirect()->route('pagos.index')
-                ->with('success', 'Pago asignado correctamente.');
-        }
-    }
 
     public function guardarPagoInscripcion(Request $request)
     {

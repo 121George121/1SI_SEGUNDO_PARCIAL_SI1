@@ -10,8 +10,10 @@ use App\Http\Controllers\Logistica_Recursos_y_Reportes\gestionarAulasController;
 use App\Http\Controllers\Gestion_Academica\gestionarGruposController;
 use App\Http\Controllers\Gestion_Academica\gestionarGestionController;
 use App\Http\Controllers\Gestion_Academica\gestionarModalidadController;
+use App\Http\Controllers\Gestion_Academica\gestionarTurnoContoller;
 use App\Http\Controllers\Logistica_Recursos_y_Reportes\gestionarDocentesController;
 use App\Http\Controllers\Logistica_Recursos_y_Reportes\reporteController;
+use App\Http\Controllers\Logistica_Recursos_y_Reportes\gestionarEspecialidadController;
 use App\Http\Controllers\Inscripcion_y_Documentacion\gestionarInscripcionController;
 use App\Http\Controllers\Gestion_Financiera\gestionarPagosController;
 use App\Http\Controllers\Gestion_Academica\gestionarMateriasYHorariosController;
@@ -150,6 +152,13 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('/turnos', [gestionarTurnoContoller::class, 'index'])->name('turnos.index');
+    Route::post('/turnos', [gestionarTurnoContoller::class, 'store'])->name('turnos.store');
+    Route::put('/turnos/{id}', [gestionarTurnoContoller::class, 'update'])->name('turnos.update');
+    Route::delete('/turnos/{id}', [gestionarTurnoContoller::class, 'destroy'])->name('turnos.destroy');
+});
+
+Route::middleware('auth')->group(function () {
     Route::get('/docentes', [gestionarDocentesController::class, 'index'])
         ->name('docentes.index');
     Route::post('/docentes', [gestionarDocentesController::class, 'store'])
@@ -174,6 +183,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/reportes/generar', [reporteController::class, 'generar'])->name('reportes.generar');
     Route::post('/reportes/exportar', [reporteController::class, 'exportar'])->name('reportes.exportar');
     Route::post('/reportes/parsear-audio', [reporteController::class, 'parsearAudio'])->name('reportes.parsearAudio');
+
+    // Gestionar Especialidades
+    Route::get('/especialidades', [gestionarEspecialidadController::class, 'index'])->name('especialidades.index');
+    Route::post('/especialidades', [gestionarEspecialidadController::class, 'store'])->name('especialidades.store');
+    Route::put('/especialidades/{id}', [gestionarEspecialidadController::class, 'update'])->name('especialidades.update');
+    Route::delete('/especialidades/{id}', [gestionarEspecialidadController::class, 'destroy'])->name('especialidades.destroy');
 });
 
 Route::middleware('auth')->group(function () {
@@ -203,7 +218,6 @@ Route::middleware('auth')->group(function () {
     Route::put('/pagos/{id}', [gestionarPagosController::class, 'update'])->name('pagos.update');
     Route::delete('/pagos/{id}', [gestionarPagosController::class, 'destroy'])->name('pagos.destroy');
     Route::post('/pagos/inscripcion/guardar', [gestionarPagosController::class, 'guardarPagoInscripcion'])->name('pagos.inscripcion.guardar');
-    Route::post('/pagos/asignar', [gestionarPagosController::class, 'asignarPago'])->name('pagos.asignar');
 
     // Paypal / Pasarela routes
     Route::post('/pagos/paypal/pagar/{idPago}/{codigoInscripcion}', [gestionarPagosController::class, 'pagarConPaypal'])->name('pagos.paypal.pagar');
@@ -245,6 +259,12 @@ Route::delete('/horarios/{id}', [gestionarMateriasYHorariosController::class, 'd
 Route::middleware('auth')->group(function () {
     Route::get('/asignaciones-docentes', [asignarDocentesAGruposYMateriasController::class, 'index'])
         ->name('asignaciones-docentes.index');
+
+    Route::get('/asignaciones-docentes/autogenerar', [asignarDocentesAGruposYMateriasController::class, 'autogenerarView'])
+        ->name('asignaciones-docentes.autogenerar.view');
+
+    Route::post('/asignaciones-docentes/autogenerar', [asignarDocentesAGruposYMateriasController::class, 'autogenerarStore'])
+        ->name('asignaciones-docentes.autogenerar.store');
 
     Route::post('/asignaciones-docentes', [asignarDocentesAGruposYMateriasController::class, 'store'])
         ->name('asignaciones-docentes.store');

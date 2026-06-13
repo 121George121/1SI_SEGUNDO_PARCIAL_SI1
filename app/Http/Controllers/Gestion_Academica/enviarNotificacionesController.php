@@ -75,7 +75,7 @@ class enviarNotificacionesController extends Controller
         $titulo = 'Confirmación de Pago Realizado - CUP FICCT';
         $mensaje = "Hola, {$nombre}.\n\nSe ha registrado de manera exitosa tu pago en nuestro sistema.\n\nDetalles del Pago:\n- Concepto: {$concepto}\n- Monto: Bs. {$monto}\n- Comprobante: {$comprobante}\n\nGracias por realizar tu pago a tiempo.";
 
-        return $this->enviarNotificacion($correo, $titulo, $mensaje, 'pago realizado', $nombre, false);
+        return $this->enviarNotificacion($correo, $titulo, $mensaje, 'pago realizado', $nombre, true);
     }
 
    
@@ -136,7 +136,7 @@ class enviarNotificacionesController extends Controller
         
         $mensaje .= "\nPor favor, ingresa al portal si necesitas corregir algún documento observado.";
 
-        return $this->enviarNotificacion($correo, $titulo, $mensaje, 'revision documentos', $nombre, false);
+        return $this->enviarNotificacion($correo, $titulo, $mensaje, 'revision documentos', $nombre, true);
     }
 
     

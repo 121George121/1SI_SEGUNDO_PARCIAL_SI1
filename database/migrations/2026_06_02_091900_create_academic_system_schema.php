@@ -50,6 +50,15 @@ return new class extends Migration
         Schema::create('especialidad', function (Blueprint $table) {
             $table->increments('Id_especialidad');
             $table->string('nombre_especialidad', 150);
+            $table->unsignedInteger('Id_materia');
+
+            $table->foreign('Id_materia')
+                ->references('Id_materia')
+                ->on('materia')
+                ->onUpdate('cascade')
+                ->onDelete('cascade');
+
+            
         });
 
         Schema::create('aula', function (Blueprint $table) {
@@ -85,14 +94,15 @@ return new class extends Migration
             $table->string('nombre', 100);
             $table->text('descripcion')->nullable();
             $table->string('estado', 20)->default('activo');
+            
         });
 
         Schema::create('comprobante', function (Blueprint $table) {
-    $table->increments('Id_comprobante');
-    $table->string('nro_comprobante', 50);
-    $table->date('fecha_emision');
-    $table->string('archivo', 255)->nullable(); // <--- Aquí está el nuevo atributo
-});
+            $table->increments('Id_comprobante');
+            $table->string('nro_comprobante', 50);
+            $table->date('fecha_emision');
+            $table->string('archivo', 255)->nullable(); // <--- Aquí está el nuevo atributo
+        });
 
         Schema::create('superadministrador', function (Blueprint $table) {
             $table->unsignedInteger('Id_superadministrador')->primary();
@@ -404,6 +414,7 @@ return new class extends Migration
             $table->unsignedInteger('Id_docente');
             $table->unsignedInteger('Id_especialidad');
 
+
             $table->primary(['Id_docente', 'Id_especialidad']);
 
             $table->foreign('Id_docente')
@@ -417,6 +428,8 @@ return new class extends Migration
                 ->on('especialidad')
                 ->onUpdate('cascade')
                 ->onDelete('cascade');
+                 
+
         });
         Schema::create('grupo', function (Blueprint $table) {
             $table->increments('Id_grupo');
@@ -458,6 +471,7 @@ return new class extends Migration
         Schema::create('grupo_horario', function (Blueprint $table) {
             $table->unsignedInteger('Id_grupo');
             $table->unsignedInteger('Id_horario');
+            $table->unsignedInteger('Id_materia');
 
             $table->primary(['Id_grupo', 'Id_horario']);
 
@@ -470,6 +484,12 @@ return new class extends Migration
             $table->foreign('Id_horario')
                 ->references('Id_horario')
                 ->on('horario')
+                ->onUpdate('cascade')
+                ->onDelete('cascade');
+
+             $table->foreign('Id_materia')
+                ->references('Id_materia')
+                ->on('materia')
                 ->onUpdate('cascade')
                 ->onDelete('cascade');
         });

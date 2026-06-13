@@ -269,7 +269,8 @@
                                         @if(isset($bloqueInfo['dias'][$dia]))
                                             @php
                                                 $horarioId = $bloqueInfo['dias'][$dia];
-                                                $materiaAsignada = isset($asignaciones[$horarioId]) ? $asignaciones[$horarioId]->Id_materia : null;
+                                                $asignacion = $asignaciones[$horarioId] ?? null;
+                                                $materiaAsignada = $asignacion ? ($asignacion->Id_materia ?? $asignacion->id_materia) : null;
                                             @endphp
                                             <select name="horario_materia[{{ $horarioId }}]" class="cell-select {{ $materiaAsignada ? 'has-value' : '' }}" onchange="updateSelectStyle(this)">
                                                 <option value="">-- Vacío --</option>

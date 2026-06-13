@@ -397,6 +397,20 @@
                                     Validar Documentos
                                 </a>
 
+                                @php
+                                    $docsValidados = ($item->documentos_aprobados == $totalDocumentos && $totalDocumentos > 0);
+                                @endphp
+
+                                @if($docsValidados)
+                                    <a href="{{ route('pagos.index', ['ci' => $item->ci]) }}" class="btn-primary" style="text-align: center; text-decoration: none;">
+                                        Liquidar Pago
+                                    </a>
+                                @else
+                                    <button class="btn-primary" style="background: #cbd5e1; color: #94a3b8; cursor: not-allowed; text-align: center; border: none; padding: 9px 12px; border-radius: 7px; font-weight: bold;" disabled title="Requiere validar previamente todos los documentos.">
+                                        Liquidar Pago
+                                    </button>
+                                @endif
+
                                 <details>
                                     <summary>Editar Inscripción</summary>
 

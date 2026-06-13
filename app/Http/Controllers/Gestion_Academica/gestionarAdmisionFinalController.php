@@ -330,9 +330,13 @@ class gestionarAdmisionFinalController extends Controller
 
     private function validarPrerrequisitos()
     {
-        if (DB::table('gestion')->count() === 0) {
+        if (DB::table('carrera')->count() === 0 || 
+            DB::table('gestion')->count() === 0 || 
+            DB::table('turno')->count() === 0 || 
+            DB::table('materia')->count() === 0 || 
+            DB::table('horario')->count() === 0) {
             return redirect()->route('menu')->withErrors([
-                'error' => 'Debe registrar al menos una gestión antes de gestionar la admisión final.'
+                'error' => 'Debe registrar al menos: Carreras y Cupos, Gestiones, Turnos, Materias y Horarios antes de gestionar la admisión final.'
             ]);
         }
         return null;

@@ -308,20 +308,20 @@
             <a href="{{ route('menu') }}">Volver al Dashboard</a>
 
             @php
+                $hasCarreras = \Illuminate\Support\Facades\DB::table('carrera')->exists();
                 $hasGestiones = \Illuminate\Support\Facades\DB::table('gestion')->exists();
-                $hasAulas = \Illuminate\Support\Facades\DB::table('aula')->exists();
-                $hasModalidades = \Illuminate\Support\Facades\DB::table('modalidad')->exists();
                 $hasTurnos = \Illuminate\Support\Facades\DB::table('turno')->exists();
                 $hasMaterias = \Illuminate\Support\Facades\DB::table('materia')->exists();
-                $hasDocentes = \Illuminate\Support\Facades\DB::table('docente')->exists();
-                $hasGrupos = \Illuminate\Support\Facades\DB::table('grupo')->exists();
-                $hasPostulantes = \Illuminate\Support\Facades\DB::table('postulante')->exists();
+                $hasHorarios = \Illuminate\Support\Facades\DB::table('horario')->exists();
 
-                $disableGrupos = !$hasGestiones || !$hasAulas || !$hasModalidades || !$hasTurnos;
-                $disableAsignarPostulantes = !$hasGrupos || !$hasPostulantes;
-                $disableAsignarDocentes = !$hasGrupos || !$hasMaterias || !$hasDocentes;
-                $disableEvaluaciones = !$hasGrupos;
-                $disableAdmision = !$hasGestiones;
+                // Check if the 5 required base catalogs are registered
+                $disableRest = !$hasCarreras || !$hasGestiones || !$hasTurnos || !$hasMaterias || !$hasHorarios;
+
+                $disableGrupos = $disableRest;
+                $disableAsignarPostulantes = $disableRest;
+                $disableAsignarDocentes = $disableRest;
+                $disableEvaluaciones = $disableRest;
+                $disableAdmision = $disableRest;
             @endphp
 
             <a href="{{ route('carreras-cupos.index') }}"
@@ -331,13 +331,13 @@
 
             <a href="{{ $disableGrupos ? '#' : route('grupos.index') }}" 
                class="{{ request()->routeIs('grupos.*') ? 'activo' : '' }} {{ $disableGrupos ? 'deshabilitado' : '' }}"
-               title="{{ $disableGrupos ? 'Requiere registrar previamente: Gestiones, Aulas, Modalidades y Turnos.' : '' }}">
+               title="{{ $disableGrupos ? 'Requiere registrar previamente: Carreras y Cupos, Gestiones, Turnos, Materias y Horarios.' : '' }}">
                 CU11 - Gestionar Grupos
             </a>
 
             <a href="{{ $disableAsignarPostulantes ? '#' : route('postulantes-grupos.index') }}" 
                class="{{ request()->routeIs('postulantes-grupos.*') ? 'activo' : '' }} {{ $disableAsignarPostulantes ? 'deshabilitado' : '' }}"
-               title="{{ $disableAsignarPostulantes ? 'Requiere registrar previamente: Grupos y Postulantes.' : '' }}">
+               title="{{ $disableAsignarPostulantes ? 'Requiere registrar previamente: Carreras y Cupos, Gestiones, Turnos, Materias y Horarios.' : '' }}">
                 CU12 - Asignar Postulantes a Grupos
             </a>
 
@@ -347,6 +347,10 @@
 
             <a href="{{ route('modalidades.index') }}" class="{{ request()->routeIs('modalidades.*') ? 'activo' : '' }}">
                 Gestionar Modalidades
+            </a>
+
+            <a href="{{ route('turnos.index') }}" class="{{ request()->routeIs('turnos.*') ? 'activo' : '' }}">
+                Gestionar Turnos
             </a>
 
             <a href="{{ route('materias.index') }}" class="{{ request()->routeIs('materias.*') ? 'activo' : '' }}">
@@ -359,19 +363,19 @@
 
             <a href="{{ $disableAsignarDocentes ? '#' : route('asignaciones-docentes.index') }}" 
                class="{{ request()->routeIs('asignaciones-docentes.*') ? 'activo' : '' }} {{ $disableAsignarDocentes ? 'deshabilitado' : '' }}"
-               title="{{ $disableAsignarDocentes ? 'Requiere registrar previamente: Grupos, Materias y Docentes.' : '' }}">
+               title="{{ $disableAsignarDocentes ? 'Requiere registrar previamente: Carreras y Cupos, Gestiones, Turnos, Materias y Horarios.' : '' }}">
                 CU15 - Asignar Docentes a Grupos y Materias
             </a>
 
             <a href="{{ $disableEvaluaciones ? '#' : route('evaluaciones-notas.index') }}" 
                class="{{ request()->routeIs('evaluaciones-notas.*') || request()->routeIs('evaluaciones.*') || request()->routeIs('notas.*') ? 'activo' : '' }} {{ $disableEvaluaciones ? 'deshabilitado' : '' }}"
-               title="{{ $disableEvaluaciones ? 'Requiere registrar previamente: Grupos.' : '' }}">
+               title="{{ $disableEvaluaciones ? 'Requiere registrar previamente: Carreras y Cupos, Gestiones, Turnos, Materias y Horarios.' : '' }}">
                 CU16 - Gestionar Evaluaciones y Notas
             </a>
 
             <a href="{{ $disableAdmision ? '#' : route('admision.index') }}" 
                class="{{ request()->routeIs('admision.*') ? 'activo' : '' }} {{ $disableAdmision ? 'deshabilitado' : '' }}"
-               title="{{ $disableAdmision ? 'Requiere registrar previamente: Gestiones.' : '' }}">
+               title="{{ $disableAdmision ? 'Requiere registrar previamente: Carreras y Cupos, Gestiones, Turnos, Materias y Horarios.' : '' }}">
                 CU17 - Gestionar Admisión Final
             </a>
         </nav>

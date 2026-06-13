@@ -82,6 +82,9 @@ class gestionarMateriasYHorariosController extends Controller
     {
         $horarios = DB::table('horario as h')
             ->leftJoin('turno as t', 't.Id_turno', '=', 'h.Id_turno')
+            ->leftJoin('grupo_horario as gh', 'gh.Id_horario', '=', 'h.Id_horario')
+            ->leftJoin('grupo as g', 'g.Id_grupo', '=', 'gh.Id_grupo')
+            ->leftJoin('materia as m', 'm.Id_materia', '=', 'gh.Id_materia')
             ->select(
                 'h.Id_horario as id_horario',
                 'h.dia',
@@ -89,7 +92,11 @@ class gestionarMateriasYHorariosController extends Controller
                 'h.hora_fin',
                 'h.estado',
                 'h.Id_turno as id_turno',
-                't.nombre as nombre_turno'
+                't.nombre as nombre_turno',
+                'gh.Id_grupo as id_grupo',
+                'g.sigla_grupo',
+                'gh.Id_materia as id_materia',
+                'm.nombre as nombre_materia'
             )
             ->orderBy('h.Id_horario', 'desc')
             ->get();
@@ -100,7 +107,26 @@ class gestionarMateriasYHorariosController extends Controller
             ->orderBy('nombre')
             ->get();
 
-        return view('Gestion_Academica.gestionarHorarios', compact('horarios', 'turnos'));
+        $grupos = DB::table('grupo')
+            ->select('Id_grupo as id_grupo', 'sigla_grupo')
+            ->whereRaw("LOWER(TRIM(estado)) = 'activo'")
+            ->orderBy('sigla_grupo')
+            ->get();
+
+        $materias = DB::table('materia')
+            ->select('Id_materia as id_materia', 'nombre')
+            ->whereRaw("LOWER(TRIM(estado)) = 'activo'")
+            ->orderBy('nombre')
+            ->get();
+
+        $todosLosGrupos = DB::table('grupo as g')
+            ->leftJoin('gestion as ge', 'ge.Id_gestion', '=', 'g.Id_gestion')
+            ->select('g.Id_grupo as id_grupo', 'g.sigla_grupo', 'ge.anio', 'ge.periodo')
+            ->whereRaw("LOWER(TRIM(g.estado)) = 'activo'")
+            ->orderBy('g.sigla_grupo')
+            ->get();
+
+        return view('Gestion_Academica.gestionarHorarios', compact('horarios', 'turnos', 'grupos', 'materias', 'todosLosGrupos'));
     }
 
     public function storeHorario(Request $request)
@@ -112,6 +138,8 @@ class gestionarMateriasYHorariosController extends Controller
             'hora_fin' => 'required|after:hora_inicio',
             'estado' => 'required|in:activo,inactivo',
             'Id_turno' => 'required|exists:turno,Id_turno',
+            'Id_grupo' => 'required|exists:grupo,Id_grupo',
+            'Id_materia' => 'required|exists:materia,Id_materia',
         ]);
 
         DB::beginTransaction();
@@ -123,16 +151,39 @@ class gestionarMateriasYHorariosController extends Controller
                     ->where('hora_inicio', $request->hora_inicio)
                     ->where('hora_fin', $request->hora_fin)
                     ->where('Id_turno', $request->Id_turno)
-                    ->exists();
+                    ->first();
 
                 if (!$exists) {
-                    DB::table('horario')->insert([
+                    $idHorario = DB::table('horario')->insertGetId([
                         'dia' => $dia,
                         'hora_inicio' => $request->hora_inicio,
                         'hora_fin' => $request->hora_fin,
                         'estado' => $request->estado,
                         'Id_turno' => $request->Id_turno,
+                    ], 'Id_horario');
+                } else {
+                    $idHorario = $exists->Id_horario;
+                }
+
+                // Associate in grupo_horario
+                $assocExists = DB::table('grupo_horario')
+                    ->where('Id_grupo', $request->Id_grupo)
+                    ->where('Id_horario', $idHorario)
+                    ->exists();
+
+                if (!$assocExists) {
+                    DB::table('grupo_horario')->insert([
+                        'Id_grupo' => $request->Id_grupo,
+                        'Id_horario' => $idHorario,
+                        'Id_materia' => $request->Id_materia,
                     ]);
+                } else {
+                    DB::table('grupo_horario')
+                        ->where('Id_grupo', $request->Id_grupo)
+                        ->where('Id_horario', $idHorario)
+                        ->update([
+                            'Id_materia' => $request->Id_materia
+                        ]);
                 }
             }
 
@@ -157,22 +208,43 @@ class gestionarMateriasYHorariosController extends Controller
             'hora_fin' => 'required|after:hora_inicio',
             'estado' => 'required|in:activo,inactivo',
             'Id_turno' => 'required|exists:turno,Id_turno',
+            'Id_grupo' => 'required|exists:grupo,Id_grupo',
+            'Id_materia' => 'required|exists:materia,Id_materia',
         ]);
 
-        DB::table('horario')
-            ->where('Id_horario', $id)
-            ->update([
-                'dia' => $request->dia,
-                'hora_inicio' => $request->hora_inicio,
-                'hora_fin' => $request->hora_fin,
-                'estado' => $request->estado,
-                'Id_turno' => $request->Id_turno,
+        DB::beginTransaction();
+        try {
+            DB::table('horario')
+                ->where('Id_horario', $id)
+                ->update([
+                    'dia' => $request->dia,
+                    'hora_inicio' => $request->hora_inicio,
+                    'hora_fin' => $request->hora_fin,
+                    'estado' => $request->estado,
+                    'Id_turno' => $request->Id_turno,
+                ]);
+
+            // Delete old association and insert new one
+            DB::table('grupo_horario')
+                ->where('Id_horario', $id)
+                ->delete();
+
+            DB::table('grupo_horario')->insert([
+                'Id_grupo' => $request->Id_grupo,
+                'Id_horario' => $id,
+                'Id_materia' => $request->Id_materia,
             ]);
 
-        $this->registrarBitacora('Actualizó horario ID '.$id);
+            DB::commit();
+            $this->registrarBitacora('Actualizó horario ID '.$id);
 
-        return redirect()->route('horarios.index')
-            ->with('success', 'Horario actualizado correctamente.');
+            return redirect()->route('horarios.index')
+                ->with('success', 'Horario actualizado correctamente.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Error al actualizar horario: ' . $e->getMessage()]);
+        }
     }
 
     public function destroyHorario($id)

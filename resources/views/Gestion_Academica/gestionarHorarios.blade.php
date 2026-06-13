@@ -203,6 +203,26 @@
             <input type="time" name="hora_fin" required>
         </div>
 
+        <div class="form-group">
+            <label>Materia</label>
+            <select name="Id_materia" required>
+                <option value="">Seleccione Materia</option>
+                @foreach($materias as $m)
+                    <option value="{{ $m->id_materia }}">{{ $m->nombre }}</option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Grupo</label>
+            <select name="Id_grupo" required>
+                <option value="">Seleccione Grupo</option>
+                @foreach($grupos as $g)
+                    <option value="{{ $g->id_grupo }}">{{ $g->sigla_grupo }}</option>
+                @endforeach
+            </select>
+        </div>
+
         <div class="form-group full">
             <button type="submit" class="btn-primary">
                 Registrar Horario(s)
@@ -212,11 +232,21 @@
 </div>
 
 <div class="card-box">
-    <h2 style="color:#0b2d6b;margin-bottom:16px;">Horarios Registrados</h2>
+    <h2 style="color:#0b2d6b;margin-bottom:16px;">Horarios Registrados por Grupo</h2>
+
+    <div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px;">
+        <label style="font-weight: bold; color: #0b2d6b; display: block; margin-bottom: 8px;">Seleccionar Grupo para Ver/Editar Horario</label>
+        <select onchange="if(this.value) window.location.href=this.value;" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 14px;">
+            <option value="">-- Seleccionar Grupo --</option>
+            @foreach($todosLosGrupos as $g)
+                <option value="{{ route('grupos.horario', $g->id_grupo) }}">{{ $g->sigla_grupo }} (Gestión: {{ $g->anio }} - {{ $g->periodo }})</option>
+            @endforeach
+        </select>
+    </div>
 
     <div style="margin-bottom:16px;">
-        <label style="font-weight:bold;color:#0b2d6b;">Buscar Horario</label>
-        <input type="text" id="buscarHorario" placeholder="Buscar por día, hora, turno o estado..."
+        <label style="font-weight:bold;color:#0b2d6b;">Buscar Grupo</label>
+        <input type="text" id="buscarHorario" placeholder="Buscar por sigla de grupo o gestión..."
                style="width:100%;padding:10px;border:1px solid #ccc;border-radius:8px;margin-top:6px;">
     </div>
 
@@ -224,102 +254,36 @@
         <table id="tablaHorarios">
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Día</th>
-                    <th>Hora Inicio</th>
-                    <th>Hora Fin</th>
-                    <th>Turno</th>
+                    <th>Grupo</th>
+                    <th>Gestión Académica</th>
                     <th>Estado</th>
                     <th>Acciones</th>
                 </tr>
             </thead>
-
             <tbody>
-                @forelse($horarios as $horario)
+                @forelse($todosLosGrupos as $g)
                     <tr>
-                        <td>{{ $horario->id_horario }}</td>
-                        <td>{{ $horario->dia }}</td>
-                        <td>{{ substr($horario->hora_inicio, 0, 5) }}</td>
-                        <td>{{ substr($horario->hora_fin, 0, 5) }}</td>
-                        <td style="font-weight: bold; color: #0b2d6b;">{{ $horario->nombre_turno ?? 'Sin Turno' }}</td>
+                        <td style="font-weight: bold; color: #0b2d6b; font-size: 16px;">{{ $g->sigla_grupo }}</td>
+                        <td>{{ $g->anio }} - {{ $g->periodo }}</td>
                         <td>
-                            <span class="estado {{ strtolower(trim($horario->estado)) === 'activo' ? 'estado-ok' : 'estado-error' }}">
-                                {{ $horario->estado }}
+                            <span class="estado estado-ok">
+                                activo
                             </span>
                         </td>
                         <td>
-                            <div class="acciones">
-                                <details>
-                                    <summary>Editar Horario</summary>
-
-                                    <form action="{{ route('horarios.update', $horario->id_horario) }}" method="POST" class="inline-form" style="grid-template-columns: repeat(2, 1fr);">
-                                        @csrf
-                                        @method('PUT')
-
-                                        <div>
-                                            <label style="font-size: 12px; color: #0b2d6b; font-weight: bold; display: block; margin-bottom: 2px;">Día</label>
-                                            <select name="dia" required style="width: 100%;">
-                                                @foreach(['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'] as $dia)
-                                                    <option value="{{ $dia }}" {{ $horario->dia == $dia ? 'selected' : '' }}>
-                                                        {{ $dia }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label style="font-size: 12px; color: #0b2d6b; font-weight: bold; display: block; margin-bottom: 2px;">Turno</label>
-                                            <select name="Id_turno" required style="width: 100%;">
-                                                @foreach($turnos as $t)
-                                                    <option value="{{ $t->id_turno }}" {{ $horario->id_turno == $t->id_turno ? 'selected' : '' }}>
-                                                        {{ $t->nombre }}
-                                                    </option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label style="font-size: 12px; color: #0b2d6b; font-weight: bold; display: block; margin-bottom: 2px;">Hora Inicio</label>
-                                            <input type="time" name="hora_inicio" value="{{ substr($horario->hora_inicio, 0, 5) }}" required style="width: 100%;">
-                                        </div>
-
-                                        <div>
-                                            <label style="font-size: 12px; color: #0b2d6b; font-weight: bold; display: block; margin-bottom: 2px;">Hora Fin</label>
-                                            <input type="time" name="hora_fin" value="{{ substr($horario->hora_fin, 0, 5) }}" required style="width: 100%;">
-                                        </div>
-
-                                        <div style="grid-column: span 2;">
-                                            <label style="font-size: 12px; color: #0b2d6b; font-weight: bold; display: block; margin-bottom: 2px;">Estado</label>
-                                            <select name="estado" required style="width: 100%;">
-                                                <option value="activo" {{ strtolower(trim($horario->estado)) === 'activo' ? 'selected' : '' }}>activo</option>
-                                                <option value="inactivo" {{ strtolower(trim($horario->estado)) === 'inactivo' ? 'selected' : '' }}>inactivo</option>
-                                            </select>
-                                        </div>
-
-                                        <div style="grid-column: span 2; margin-top: 6px;">
-                                            <button type="submit" class="btn-warning" style="width: 100%;">
-                                                Actualizar
-                                            </button>
-                                        </div>
-                                    </form>
-                                </details>
-
-                                <form action="{{ route('horarios.destroy', $horario->id_horario) }}"
-                                      method="POST"
-                                      onsubmit="return confirm('¿Seguro que deseas eliminar este horario?')">
-                                    @csrf
-                                    @method('DELETE')
-
-                                    <button type="submit" class="btn-danger" style="width: 100%;">
-                                        Eliminar
-                                    </button>
-                                </form>
+                            <div class="acciones" style="flex-direction: row; gap: 8px;">
+                                <a href="{{ route('grupos.horario', $g->id_grupo) }}" class="btn-primary" style="text-align: center; text-decoration: none;">
+                                    Ver/Editar Horario
+                                </a>
+                                <a href="{{ route('grupos.horario.imprimir', $g->id_grupo) }}" class="btn-warning" style="text-align: center; text-decoration: none;" target="_blank">
+                                    Imprimir Horario
+                                </a>
                             </div>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" style="text-align:center;">No hay horarios registrados.</td>
+                        <td colspan="4" style="text-align:center;">No hay grupos registrados.</td>
                     </tr>
                 @endforelse
             </tbody>

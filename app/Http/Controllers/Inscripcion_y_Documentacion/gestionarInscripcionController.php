@@ -70,7 +70,8 @@ class gestionarInscripcionController extends Controller
                 DB::raw('"pi"."Id_modalidad" as id_modalidad_preferencia'),
                 DB::raw('"pi"."Id_turno" as id_turno_preferencia'),
                 'm.nombre_modalidad as modalidad_preferencia',
-                't.nombre as turno_preferencia'
+                't.nombre as turno_preferencia',
+                DB::raw('(SELECT COUNT(*) FROM "persona_documento" pd JOIN "documento" d ON "d"."Id_documento" = "pd"."Id_documento" WHERE "pd"."Id_persona" = "i"."Id_postulante" AND "pd"."estado" = \'Aprobado\' AND LOWER(TRIM("d"."destinado_a")) = \'postulantes\') as documentos_aprobados')
             )
             ->orderBy(DB::raw('"i"."Codigo_inscripcion"'), 'desc')
             ->get();
@@ -108,12 +109,17 @@ class gestionarInscripcionController extends Controller
             ->orderBy('nombre')
             ->get();
 
+        $totalDocumentos = DB::table('documento')
+            ->whereRaw("LOWER(TRIM(destinado_a)) = 'postulantes'")
+            ->count();
+
         return view('Inscripcion_y_Documentacion.gestionarInscripcion', compact(
             'inscripciones',
             'carreras',
             'gestiones',
             'modalidades',
-            'turnos'
+            'turnos',
+            'totalDocumentos'
         ));
     }
 
@@ -344,6 +350,28 @@ class gestionarInscripcionController extends Controller
                     'estado' => 'activo',
                 ]);
             }
+
+            // Asignar automáticamente los pagos activos registrados en el sistema
+            $pagosActivos = DB::table('pago')
+                ->whereRaw("LOWER(TRIM(estado_pago)) = 'activo'")
+                ->get();
+
+            foreach ($pagosActivos as $p) {
+                $existePagoInscripcion = DB::table('pago_inscripcion')
+                    ->where('Codigo_inscripcion', $codigoInscripcion)
+                    ->where('Id_pago', $p->Id_pago)
+                    ->exists();
+
+                if (!$existePagoInscripcion) {
+                    DB::table('pago_inscripcion')->insert([
+                        'Id_pago' => $p->Id_pago,
+                        'Codigo_inscripcion' => $codigoInscripcion,
+                        'estado_pago_inscripcion' => 'Pendiente',
+                        'fecha_pago' => null,
+                        'Id_comprobante' => null,
+                    ]);
+                }
+            }
             
             $this->actualizarEstadoInscripcionPorDocumentosYPago($codigoInscripcion);
 
@@ -465,6 +493,28 @@ class gestionarInscripcionController extends Controller
                     'estado' => 'activo'
                 ]
             );
+
+            // Asignar automáticamente los pagos activos registrados en el sistema
+            $pagosActivos = DB::table('pago')
+                ->whereRaw("LOWER(TRIM(estado_pago)) = 'activo'")
+                ->get();
+
+            foreach ($pagosActivos as $p) {
+                $existePagoInscripcion = DB::table('pago_inscripcion')
+                    ->where('Codigo_inscripcion', $id)
+                    ->where('Id_pago', $p->Id_pago)
+                    ->exists();
+
+                if (!$existePagoInscripcion) {
+                    DB::table('pago_inscripcion')->insert([
+                        'Id_pago' => $p->Id_pago,
+                        'Codigo_inscripcion' => $id,
+                        'estado_pago_inscripcion' => 'Pendiente',
+                        'fecha_pago' => null,
+                        'Id_comprobante' => null,
+                    ]);
+                }
+            }
 
             $this->registrarBitacora(
                 'Inscripcion',
@@ -624,6 +674,28 @@ class gestionarInscripcionController extends Controller
         if (!$inscripcion) {
             return redirect()->route('inscripcion.index')
                 ->withErrors(['error' => 'La inscripción no existe.']);
+        }
+
+        // Sincronizar de forma automática conceptos de pago activos con esta inscripción
+        $pagosActivos = DB::table('pago')
+            ->whereRaw("LOWER(TRIM(estado_pago)) = 'activo'")
+            ->get();
+
+        foreach ($pagosActivos as $p) {
+            $existe = DB::table('pago_inscripcion')
+                ->where('Codigo_inscripcion', $codigo)
+                ->where('Id_pago', $p->Id_pago)
+                ->exists();
+
+            if (!$existe) {
+                DB::table('pago_inscripcion')->insert([
+                    'Id_pago' => $p->Id_pago,
+                    'Codigo_inscripcion' => $codigo,
+                    'estado_pago_inscripcion' => 'Pendiente',
+                    'fecha_pago' => null,
+                    'Id_comprobante' => null,
+                ]);
+            }
         }
 
         $pago = DB::table('pago as pg')
@@ -921,7 +993,7 @@ class gestionarInscripcionController extends Controller
                     $mensaje,
                     'inscripción confirmada',
                     $nombreCompleto,
-                    false
+                    true
                 );
             }
         } catch (\Throwable $e) {

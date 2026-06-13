@@ -259,7 +259,7 @@
     </div>
 </div>
 
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+<div style="margin-bottom: 24px;">
     <!-- Generar Concepto de Pago -->
     <div class="card-box" style="margin-bottom: 0;">
         <h2 style="color:#0b2d6b; margin-bottom:16px;">Generar Concepto de Pago</h2>
@@ -292,52 +292,7 @@
 
             <div class="form-group full">
                 <button type="submit" class="btn-primary">
-                    Registrar Concepto
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Asignar Concepto de Pago a Postulante -->
-    <div class="card-box" style="margin-bottom: 0;">
-        <h2 style="color:#0b2d6b; margin-bottom:16px;">Asignar Concepto de Pago</h2>
-
-        <form action="{{ route('pagos.asignar') }}" method="POST" class="form-grid">
-            @csrf
-
-            <div class="form-group">
-                <label>Concepto de Pago</label>
-                <select name="Id_pago" required>
-                    <option value="">Seleccione un concepto...</option>
-                    @foreach($conceptos as $concepto)
-                        @if($concepto->estado_pago == 'activo')
-                            <option value="{{ $concepto->id_pago }}">
-                                {{ $concepto->concepto_pago }} - Bs. {{ $concepto->monto }}
-                            </option>
-                        @endif
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label>Postulante / Inscripción</label>
-                <select name="Codigo_inscripcion">
-                    <option value="">Seleccione una inscripción (para asignación individual)...</option>
-                    @foreach($inscripciones as $inscripcion)
-                        <option value="{{ $inscripcion->codigo_inscripcion }}">
-                            CI: {{ $inscripcion->ci }} - {{ $inscripcion->nombre }} {{ $inscripcion->apellido }} (#{{ $inscripcion->codigo_inscripcion }})
-                        </option>
-                    @endforeach
-                </select>
-                <small style="color: #6b7280; margin-top: 4px;">Dejar vacío si va a asignar a todos los postulantes.</small>
-            </div>
-
-            <div class="form-group full" style="margin-top: 30px; display: flex; gap: 10px;">
-                <button type="submit" class="btn-success" style="flex: 1;">
-                    Asignar Individual
-                </button>
-                <button type="submit" name="asignar_todos" value="1" class="btn-danger" style="flex: 1; background: #d97706;">
-                    Asignar a Todos
+                    Registrar Concepto y Asignar a Todos
                 </button>
             </div>
         </form>
@@ -551,7 +506,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (!buscador || !tabla) return;
 
-    buscador.addEventListener('keyup', function () {
+    function filtrar() {
         const texto = buscador.value.toLowerCase();
         const filas = tabla.querySelectorAll('tbody tr');
 
@@ -559,7 +514,17 @@ document.addEventListener('DOMContentLoaded', function () {
             const contenido = fila.textContent.toLowerCase();
             fila.style.display = contenido.includes(texto) ? '' : 'none';
         });
-    });
+    }
+
+    buscador.addEventListener('keyup', filtrar);
+
+    // Auto-filter by CI from query parameter if present
+    const urlParams = new URLSearchParams(window.location.search);
+    const ciParam = urlParams.get('ci');
+    if (ciParam) {
+        buscador.value = ciParam;
+        filtrar();
+    }
 });
 </script>
 

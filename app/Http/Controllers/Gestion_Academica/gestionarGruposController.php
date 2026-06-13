@@ -418,7 +418,7 @@ class gestionarGruposController extends Controller
         // Fetch active classrooms
         $aulas = DB::table('aula')
             ->whereRaw("LOWER(TRIM(estado)) = 'activo'")
-            ->orderBy('capacidad', 'desc')
+            ->orderBy('Id_aula')
             ->get();
 
         if ($aulas->isEmpty()) {
@@ -427,74 +427,95 @@ class gestionarGruposController extends Controller
             ])->withInput();
         }
 
+        // Fetch turnos and map shift names to single-letter codes
+        $turnos = DB::table('turno')->get();
+        $turnoCodes = [];
+        foreach ($turnos as $t) {
+            $name = mb_strtolower(trim($t->nombre));
+            if (strpos($name, 'mañana') !== false || strpos($name, 'manana') !== false) {
+                $turnoCodes[$t->Id_turno] = 'M';
+            } elseif (strpos($name, 'tarde') !== false) {
+                $turnoCodes[$t->Id_turno] = 'T';
+            } elseif (strpos($name, 'noche') !== false) {
+                $turnoCodes[$t->Id_turno] = 'N';
+            } else {
+                $turnoCodes[$t->Id_turno] = strtoupper(substr(trim($t->nombre), 0, 1));
+            }
+        }
+
         DB::beginTransaction();
 
         try {
-            $grouped = $postulantes->groupBy(function($item) {
-                return $item->Id_modalidad . '-' . $item->Id_turno;
-            });
+            // Group students by modality first
+            $groupedByModalidad = $postulantes->groupBy('Id_modalidad');
 
             $aulaIndex = 0;
             $totalGruposCreados = 0;
             $totalAsignados = 0;
 
-            foreach ($grouped as $key => $studentsInPreferencia) {
-                $first = $studentsInPreferencia->first();
-                $idModalidad = $first->Id_modalidad;
-                $idTurno = $first->Id_turno;
+            foreach ($groupedByModalidad as $idModalidad => $studentsInModalidad) {
+                $N_m = $studentsInModalidad->count();
+                $G_m = (int) ceil($N_m / $C);
 
-                $modalidadObj = DB::table('modalidad')->where('Id_modalidad', $idModalidad)->first();
-                $turnoObj = DB::table('turno')->where('Id_turno', $idTurno)->first();
+                // Determine the shift with most preferences for this modality
+                $turnoCounts = $studentsInModalidad->groupBy('Id_turno')
+                    ->map(function ($group) {
+                        return $group->count();
+                    })
+                    ->toArray();
 
-                $modalidadNombre = $modalidadObj ? $modalidadObj->nombre_modalidad : 'Mod';
-                $turnoNombre = $turnoObj ? $turnoObj->nombre : 'Tur';
+                // Sort descending to find the shift with maximum count
+                arsort($turnoCounts);
+                $idTurnoMasPreferido = key($turnoCounts);
 
-                $modPrefix = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $modalidadNombre), 0, 3));
-                $turPrefix = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', $turnoNombre), 0, 1));
+                // If not found, fallback to first active shift
+                if (!$idTurnoMasPreferido) {
+                    $idTurnoMasPreferido = DB::table('turno')->whereRaw("LOWER(TRIM(estado)) = 'activo'")->value('Id_turno');
+                }
 
-                $remainingStudents = $studentsInPreferencia->pluck('Id_postulante')->toArray();
+                $turnoCode = $turnoCodes[$idTurnoMasPreferido] ?? 'G';
+                $remainingStudents = $studentsInModalidad->pluck('Id_postulante')->toArray();
 
-                while (!empty($remainingStudents)) {
-                    // Pick classroom matching capacity or cycle
-                    $candidatas = $aulas->filter(function($a) use ($C) {
-                        return $a->capacidad >= $C;
-                    });
-                    if ($candidatas->isNotEmpty()) {
-                        $aula = $candidatas->values()->get($aulaIndex % $candidatas->count());
-                        $aulaIndex++;
-                    } else {
-                        $aula = $aulas->first(); // pick largest capacity
+                for ($i = 0; $i < $G_m; $i++) {
+                    if (empty($remainingStudents)) {
+                        break;
                     }
 
-                    $grupoCapacidadMax = min($C, $aula->capacidad ?? $C);
-                    $chunk = array_splice($remainingStudents, 0, $grupoCapacidadMax);
+                    // Extract up to C students for this group
+                    $chunk = array_splice($remainingStudents, 0, $C);
 
-                    // Generate unique sigla
+                    // Assign classroom sequentially
+                    $aula = $aulas->get($aulaIndex % $aulas->count());
+                    $aulaIndex++;
+
+                    // Generate unique sigla in format: ShiftPrefix + sequential number (e.g. T1, T2)
                     $sec = 1;
                     do {
-                        $sigla = sprintf("%s-%s-%02d", $modPrefix, $turPrefix, $sec);
+                        $sigla = $turnoCode . $sec;
                         $existe = DB::table('grupo')
                             ->where('sigla_grupo', $sigla)
                             ->where('Id_gestion', $idGestion)
                             ->exists();
-                        $sec++;
+                        if ($existe) {
+                            $sec++;
+                        }
                     } while ($existe);
 
-                    // Insert group
+                    // Insert group with maximum capacity from the interface ($C)
                     $idGrupo = DB::table('grupo')->insertGetId([
                         'sigla_grupo' => $sigla,
-                        'capacidad_max' => $grupoCapacidadMax,
+                        'capacidad_max' => $C,
                         'estado' => 'activo',
                         'cant_estudiantes' => count($chunk),
                         'Id_aula' => $aula->Id_aula,
                         'Id_modalidad' => $idModalidad,
-                        'Id_turno' => $idTurno,
+                        'Id_turno' => $idTurnoMasPreferido,
                         'Id_gestion' => $idGestion,
                     ], 'Id_grupo');
 
                     $totalGruposCreados++;
 
-                    // Assign students
+                    // Assign students to group
                     foreach ($chunk as $idPostulante) {
                         DB::table('grupo_postulante')->insert([
                             'Id_grupo' => $idGrupo,
@@ -555,11 +576,11 @@ class gestionarGruposController extends Controller
             return redirect()->route('grupos.index')->withErrors(['error' => 'Grupo no encontrado.']);
         }
 
-        // Obtener las materias asignadas a este grupo
-        $materias = DB::table('grupo_materia as gm')
-            ->join('materia as m', 'm.Id_materia', '=', 'gm.Id_materia')
-            ->select('m.Id_materia as id_materia', 'm.nombre')
-            ->where('gm.Id_grupo', $id)
+        // Obtener las materias activas
+        $materias = DB::table('materia')
+            ->select('Id_materia as id_materia', 'nombre')
+            ->whereRaw("LOWER(TRIM(estado)) = 'activo'")
+            ->orderBy('nombre')
             ->get();
 
         // Obtener horarios asociados a este turno y activos
@@ -582,7 +603,10 @@ class gestionarGruposController extends Controller
         $asignaciones = DB::table('grupo_horario')
             ->where('Id_grupo', $id)
             ->get()
-            ->keyBy('Id_horario');
+            ->mapWithKeys(function ($item) {
+                $key = $item->Id_horario ?? $item->id_horario ?? null;
+                return [$key => $item];
+            });
 
         // Formatear los bloques de hora únicos
         $bloques = [];
@@ -731,9 +755,13 @@ class gestionarGruposController extends Controller
 
     private function validarPrerrequisitos()
     {
-        if (DB::table('gestion')->count() === 0 || DB::table('aula')->count() === 0 || DB::table('modalidad')->count() === 0 || DB::table('turno')->count() === 0) {
+        if (DB::table('carrera')->count() === 0 || 
+            DB::table('gestion')->count() === 0 || 
+            DB::table('turno')->count() === 0 || 
+            DB::table('materia')->count() === 0 || 
+            DB::table('horario')->count() === 0) {
             return redirect()->route('menu')->withErrors([
-                'error' => 'Debe registrar al menos una gestión, aula, modalidad y turno antes de acceder a la gestión de grupos.'
+                'error' => 'Debe registrar al menos: Carreras y Cupos, Gestiones, Turnos, Materias y Horarios antes de acceder a la gestión de grupos.'
             ]);
         }
         return null;

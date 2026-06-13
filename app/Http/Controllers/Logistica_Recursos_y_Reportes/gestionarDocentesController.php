@@ -18,6 +18,7 @@ class gestionarDocentesController extends Controller
             ->join('persona as p', DB::raw('"p"."Id_persona"'), '=', DB::raw('"d"."Id_docente"'))
             ->leftJoin('docente_especialidad as de', DB::raw('"de"."Id_docente"'), '=', DB::raw('"d"."Id_docente"'))
             ->leftJoin('especialidad as e', DB::raw('"e"."Id_especialidad"'), '=', DB::raw('"de"."Id_especialidad"'))
+            ->leftJoin('materia as m', DB::raw('"m"."Id_materia"'), '=', DB::raw('"e"."id_materia"'))
             ->select(
                 DB::raw('"d"."Id_docente" as id_docente'),
                 DB::raw('"p"."Id_persona" as id_persona'),
@@ -31,7 +32,7 @@ class gestionarDocentesController extends Controller
                 'p.direccion',
                 'd.anio_servicio',
                 'd.estado',
-                DB::raw("COALESCE(string_agg(e.nombre_especialidad, ', '), 'Sin especialidad') as especialidades")
+                DB::raw('COALESCE(string_agg("e"."nombre_especialidad" || COALESCE(\' (\' || "m"."nombre" || \')\', \'\'), \', \'), \'Sin especialidad\') as especialidades')
             )
             ->groupBy(
                 DB::raw('"d"."Id_docente"'),

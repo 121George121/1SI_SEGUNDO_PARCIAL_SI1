@@ -7,6 +7,12 @@
 <h1 class="titulo">CU15 - Asignar Docentes a Grupos y Materias</h1>
 <p class="subtitulo">Asignar docentes disponibles a grupos y materias.</p>
 
+<div style="margin-bottom: 20px;">
+    <a href="{{ route('asignaciones-docentes.autogenerar.view') }}" class="btn-primary" style="background: #10b981; display: inline-flex; align-items: center; justify-content: center; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; transition: background 0.2s; border: none; color: white;">
+        Asignación Automática de Docentes
+    </a>
+</div>
+
 <style>
     .card-box {
         background: #fff;

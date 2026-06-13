@@ -122,7 +122,7 @@
         display: inline-block;
     }
 
-    .estado-revision {
+    .estado-pendiente, .estado-revision, .estado-En_Revision {
         background: #fef3c7;
         color: #92400e;
     }
@@ -130,6 +130,11 @@
     .estado-activo {
         background: #d1fae5;
         color: #065f46;
+    }
+
+    .estado-rechazado, .estado-inactivo {
+        background: #fee2e2;
+        color: #991b1b;
     }
 
     @media (max-width: 768px) {
@@ -170,8 +175,8 @@
 
         <div class="info-item">
             <strong>Estado</strong>
-            <span class="estado {{ $docente->estado == 'activo' ? 'estado-activo' : 'estado-revision' }}">
-                {{ $docente->estado }}
+            <span class="estado estado-{{ $docente->estado }}">
+                {{ ucfirst($docente->estado) }}
             </span>
         </div>
     </div>
