@@ -16,24 +16,10 @@ return new class extends Migration
                 ->onUpdate('cascade')
                 ->onDelete('set null');
         });
-
-        Schema::table('grupo_horario', function (Blueprint $table) {
-            $table->unsignedInteger('Id_materia')->nullable();
-            $table->foreign('Id_materia')
-                ->references('Id_materia')
-                ->on('materia')
-                ->onUpdate('cascade')
-                ->onDelete('set null');
-        });
     }
 
     public function down(): void
     {
-        Schema::table('grupo_horario', function (Blueprint $table) {
-            $table->dropForeign(['Id_materia']);
-            $table->dropColumn('Id_materia');
-        });
-
         Schema::table('horario', function (Blueprint $table) {
             $table->dropForeign(['Id_turno']);
             $table->dropColumn('Id_turno');

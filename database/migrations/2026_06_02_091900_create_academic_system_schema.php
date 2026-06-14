@@ -47,6 +47,13 @@ return new class extends Migration
 
         DB::statement('ALTER TABLE gestion ADD CONSTRAINT chk_gestion_anio CHECK (anio >= 2000 AND anio <= 2100)');
 
+        Schema::create('materia', function (Blueprint $table) {
+            $table->increments('Id_materia');
+            $table->string('nombre', 100);
+            $table->text('descripcion')->nullable();
+            $table->string('estado', 20)->default('activo');
+        });
+
         Schema::create('especialidad', function (Blueprint $table) {
             $table->increments('Id_especialidad');
             $table->string('nombre_especialidad', 150);
@@ -87,14 +94,6 @@ return new class extends Migration
             $table->time('hora_inicio');
             $table->time('hora_fin');
             $table->string('estado', 20)->default('activo');
-        });
-
-        Schema::create('materia', function (Blueprint $table) {
-            $table->increments('Id_materia');
-            $table->string('nombre', 100);
-            $table->text('descripcion')->nullable();
-            $table->string('estado', 20)->default('activo');
-            
         });
 
         Schema::create('comprobante', function (Blueprint $table) {
