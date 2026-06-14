@@ -38,8 +38,9 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         intl \
         opcache
 
-# Enable Apache rewrite module
-RUN a2enmod rewrite
+# Disable conflicting Apache MPM modules and enable prefork and rewrite modules
+RUN a2dismod mpm_event || true \
+    && a2enmod mpm_prefork rewrite
 
 # Copy custom Apache configuration
 COPY docker/apache/000-default.conf /etc/apache2/sites-available/000-default.conf
