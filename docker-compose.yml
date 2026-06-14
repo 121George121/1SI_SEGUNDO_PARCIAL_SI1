@@ -1,0 +1,42 @@
+services:
+  # Laravel Application Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: laravel_app
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      - APP_NAME="Sistema de Inscripcion"
+      - APP_ENV=local
+      - APP_KEY=base64:Qk+YE2vKMYMEP2dXci7UMNpUkYo9v7HEE7TMKk/GgUI=
+      - APP_DEBUG=true
+      - APP_URL=http://localhost:8080
+      - DB_CONNECTION=pgsql
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_DATABASE=inscripcion_cup
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=secretpassword
+      - DB_AUTO_MIGRATE=true
+    depends_on:
+      - db
+
+  # PostgreSQL Database Service
+  db:
+    image: postgres:16-alpine
+    container_name: postgres_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: inscripcion_cup
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secretpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
