@@ -141,7 +141,7 @@ class gestionarPagosController extends Controller
                 'monto' => $request->monto,
                 'estado_pago' => $request->estado_pago,
                 'observaciones' => $request->observaciones,
-            ]);
+            ], 'Id_pago');
 
             // Asignar automáticamente a todos los postulantes (inscripciones)
             $inscripciones = DB::table('inscripcion')->select('Codigo_inscripcion')->get();
